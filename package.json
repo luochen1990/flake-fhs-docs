@@ -1,0 +1,23 @@
+{
+  "name": "flake-fhs-docs",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "check": "astro check && tsc --noEmit",
+    "check-links": "find src/content/docs -name '*.md' -exec grep -H '\\.md' {} \\;",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.0",
+    "@astrojs/starlight": "^0.26.0",
+    "astro": "^4.14.0",
+    "typescript": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

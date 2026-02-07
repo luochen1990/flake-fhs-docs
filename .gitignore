@@ -1,0 +1,8 @@
+result
+result-*
+dist/
+node_modules/
+
+.direnv
+
+.astro/

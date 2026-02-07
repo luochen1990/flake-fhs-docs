@@ -1,0 +1,48 @@
+{
+  "nodes": {
+    "flake-fhs": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1770430521,
+        "narHash": "sha256-6xwG6tFiEOAjIvyQol5Xira4e6fQb/e25R+uNk0RQqw=",
+        "owner": "luochen1990",
+        "repo": "flake-fhs",
+        "rev": "94c0b0751b892c06b006968773358c877af63530",
+        "type": "github"
+      },
+      "original": {
+        "owner": "luochen1990",
+        "repo": "flake-fhs",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1770197578,
+        "narHash": "sha256-AYqlWrX09+HvGs8zM6ebZ1pwUqjkfpnv8mewYwAo+iM=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "00c21e4c93d963c50d4c0c89bfa84ed6e0694df2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "flake-fhs": "flake-fhs",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

@@ -1,0 +1,145 @@
+# AGENTS.md
+
+本文档是 `flake-fhs-docs` 仓库的开发与维护指南，适用于 AI 助手与开发者。
+
+## 1. 项目定位
+
+**`flake-fhs-docs`** 是 **Flake FHS** 框架的官方文档站点。
+- **技术栈**: [Astro Starlight](https://starlight.astro.build/), React, TypeScript.
+- **目标**: 提供全面、易用、可搜索的文档体验。
+- **SSOT**: 本仓库是 Flake FHS 文档的**单一事实来源 (Single Source of Truth)**。
+
+## 2. 仓库架构与关系
+
+本项目是 Flake FHS 生态系统的一部分：
+
+| 仓库 | 角色 | 关系 |
+| :--- | :--- | :--- |
+| **`flake-fhs`** | **核心运行时 (RTS)** | 框架实现本身。仅包含代码和注释，不含文档站源码。 |
+| **`flake-fhs-docs`** | **文档产品** | **(本仓库)** 面向用户的文档网站。独立维护内容生命周期。 |
+| **`flake-fhs-dev`** | **工作区 (Workspace)** | 父级仓库，通过 submodule 聚合上述两个仓库，用于协同开发。 |
+
+### 分离原因
+- **依赖纯净**: 避免 `flake-fhs` 的下游用户下载不必要的文档构建依赖。
+- **独立生命周期**: 文档可独立于框架核心进行更新、版本控制和部署。
+
+## 3. 开发流程
+
+我们使用 **Nix** 提供可复用的开发环境。
+
+1.  **环境**: `nix develop` (包含 `nodejs` 和 `pnpm`)。
+2.  **安装**: `pnpm install`。
+3.  **运行**:
+    - `pnpm dev`: 启动本地开发服务器 (默认端口 `4321`)。
+    - `pnpm build`: 构建生产环境静态站点。
+    - `pnpm preview`: 预览构建后的站点。
+4.  **检查**: `pnpm check` (运行 `astro check` 和 `tsc`，确保类型安全)。
+
+## 4. 内容策略 (i18n & SSOT)
+
+- **主要语言**: **简体中文 (`zh-cn`)** 是文档内容的单一事实来源。
+- **目录结构**:
+    - `src/content/docs/zh-cn/`: 源内容。
+    - `src/content/docs/en/`: 英文翻译。
+    - `src/assets/`: 静态资源（图片、Logo 等）。
+- **文件命名**: 使用 kebab-case 命名法（如 `manual-best-practices.md`）。
+
+## 5. 链接维护原则
+
+Starlight 在多语言环境下对不同位置的链接有明确的行为差异，遵循以下原则确保链接的正确性。
+
+### 5.1 Sidebar 配置 (`astro.config.mjs`)
+
+**原则**：内部文档链接必须使用 `slug` 属性以支持自动 Locale 路由，外部链接使用 `link`。
+
+| 属性 | 自动添加 Locale | 使用场景 |
+|------|----------------|----------|
+| `slug` | ✅ 是 | 内部文档链接（推荐）。例如 `manual-pkgs` 会自动解析为 `/zh-cn/manual-pkgs` |
+| `link` | ❌ 否 | 外部链接、或根路径 `/` |
+
+**示例**：
+```javascript
+// 内部链接（自动添加 locale）
+{ label: '软件包', slug: 'manual-pkgs' }
+
+// 外部链接或绝对路径（不添加 locale）
+{ label: 'GitHub', link: 'https://github.com/...' }
+{ label: '首页', link: '/' }
+```
+
+### 5.2 Frontmatter 配置
+
+**原则**：hero actions 中的链接必须明确指定完整路径（包含 locale）。
+
+```yaml
+---
+hero:
+  actions:
+    - text: 快速开始
+      link: /zh-cn/manual-best-practices/  # ✅ 必须包含 locale
+    - text: GitHub
+      link: https://github.com/...          # ✅ 外部链接
+---
+```
+
+### 5.3 Markdown 内容链接
+
+**原则**：使用相对路径，**严禁**包含 `.md` 或 `.mdx` 后缀。
+
+**推荐格式**：
+```markdown
+[详情](./manual-pkgs)         # ✅ 相对路径，自动适配当前 locale
+[详情](../manual-hosts)       # ✅ 跨目录相对路径
+[详情](./manual-pkgs#section)  # ✅ 支持锚点
+```
+
+**禁止格式**：
+```markdown
+[详情](./manual-pkgs.md)  # ❌ 带后缀会导致 404 (Starlight 路由不自动剥离后缀)
+[主页](/)                   # ❌ 缺少 locale，会跳回根目录
+[主页](/zh-cn/)             # ✅ 显式指定 locale 根路径可用
+```
+
+## 6. 组件与 UI 开发规范
+
+### 6.1 内置组件优先
+在编写文档时，优先使用 Starlight 提供的内置组件以保持视觉一致性：
+- `<Steps>`: 用于分步指南。
+- `<Aside>`: 用于警告、提示 (Note, Tip, Caution, Danger)。
+- `<Tabs>`, `<TabItem>`: 用于多语言或多系统代码切换。
+- `<FileTree>`: 用于展示文件结构。
+
+### 6.2 自定义组件
+- **位置**: `src/components/`
+- **类型安全**: 必须定义 TypeScript 接口 (`interface Props`)。
+- **样式**: 优先使用 Tailwind CSS（如果已配置）或 Scoped CSS (`<style>`).
+
+```tsx
+// src/components/MyComponent.astro
+---
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+<div class="my-component">
+  <h3>{title}</h3>
+</div>
+```
+
+## 7. 维护原则
+
+- **Skill 加载**: 维护此仓库时，**始终**应加载 `astro-coding` skill，以获取 Astro/Starlight 的最佳实践和框架特定指导。
+- **MCP 工具**: 使用 `astro-docs` MCP 工具进行 Astro 文档搜索和查询，确保对框架特性的准确理解。
+- **代码文档同步**: 当 `flake-fhs` 核心功能变更时，**必须**立即更新本文档站。
+- **类型安全**: 保持 `tsconfig.json` 严格模式；自定义组件必须使用 TypeScript。
+- **链接规范**: 严格遵循第 5 节的链接维护原则，确保多语言环境下的正确性。
+- **文档保鲜**: 当架构或技术栈变更时，及时更新本 `AGENTS.md`。
+
+**使用工具的方法**：
+```bash
+# 在开始维护任务前，加载 astro-coding skill
+/skill astro-coding
+
+# 需要查询 Astro 官方文档时，使用 astro-docs MCP
+```
