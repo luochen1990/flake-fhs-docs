@@ -3,23 +3,27 @@ title: 系统配置 (Hosts)
 description: 了解如何定义具体的机器配置（Entrypoints），包括目录结构、架构设置、构建部署以及多机管理
 ---
 
+import { FileTree, Aside } from '@astrojs/starlight/components';
+
 # 系统配置 (System Configurations)
 
 `hosts/` 目录用于定义具体的机器配置（Entrypoints），映射为 `nixosConfigurations.<name>`。
 
 ## 目录结构
 
-```
-hosts/
-├── server-a/
-│   └── configuration.nix   # -> nixosConfigurations.server-a
-├── laptop/
-│   ├── default.nix         # -> 定义架构元数据 (可选)
-│   ├── hardware.nix
-│   └── configuration.nix   # -> nixosConfigurations.laptop
-└── shared/                 # (约定) 存放共享配置
-    └── common.nix
-```
+<FileTree>
+
+- hosts/
+  - server-a/
+    - configuration.nix   /** -> nixosConfigurations.server-a */
+  - laptop/
+    - default.nix         /** -> 定义架构元数据 (可选) */
+    - hardware.nix
+    - configuration.nix   /** -> nixosConfigurations.laptop */
+  - shared/               /** (约定) 存放共享配置 */
+    - common.nix
+
+</FileTree>
 
 系统会自动寻找 `<name>/configuration.nix` 作为入口文件。
 
@@ -52,7 +56,9 @@ hosts/
 }
 ```
 
-> **注意**：不要在 `configuration.nix` 中通过 `nixpkgs.hostPlatform` 设置架构。因为 Flake FHS 会在模块加载前预先实例化 `pkgs` 并注入到模块参数中，因此模块内部的架构设置会被忽略。必须通过 `default.nix` 在实例化前告知框架所需的架构。
+<Aside type="caution">
+不要在 `configuration.nix` 中通过 `nixpkgs.hostPlatform` 设置架构。因为 Flake FHS 会在模块加载前预先实例化 `pkgs` 并注入到模块参数中，因此模块内部的架构设置会被忽略。必须通过 `default.nix` 在实例化前告知框架所需的架构。
+</Aside>
 
 ## 构建与部署
 

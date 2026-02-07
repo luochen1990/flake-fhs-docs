@@ -8,7 +8,7 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "check": "astro check && tsc --noEmit",
-    "check-links": "find src/content/docs -name '*.md' -exec grep -H '\\.md' {} \\;",
+    "check-links": "find src/content/docs -name '*.md*' -exec grep -H '\\.md' {} \\;",
     "astro": "astro"
   },
   "dependencies": {

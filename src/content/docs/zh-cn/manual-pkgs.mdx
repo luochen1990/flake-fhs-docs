@@ -3,6 +3,8 @@ title: 软件包 (Packages)
 description: 深入了解 Scoped Package Tree 模型，包括 Scope 作用域、callPackage 机制和依赖注入
 ---
 
+import { FileTree, Aside } from '@astrojs/starlight/components';
+
 # 软件包 (Packages) & Scoped Package Tree
 
 Flake FHS 采用统一的 **"Scoped Package Tree"** 模型来处理软件包 (`pkgs`)、应用程序 (`apps`)、开发环境 (`shells`) 和检查 (`checks`)。
@@ -17,18 +19,20 @@ Flake FHS 采用统一的 **"Scoped Package Tree"** 模型来处理软件包 (`p
 
 遵循类似 `nixpkgs` 的 `by-name` 结构，同时支持单文件定义：
 
-```
-pkgs/
-├── hello.nix            # 简单包 (文件模式)
-├── complex-app/         # 复杂包 (目录模式)
-│   ├── package.nix      # -> 必须包含此文件，被识别为包定义
-│   └── src/             # 其他辅助文件不会被识别为独立包
-└── group/               # 包组 (普通目录)
-    ├── scope.nix        # -> 定义局部作用域
-    ├── utils.nix        # 辅助文件，非包定义
-    └── core/
-        └── package.nix  # 子目录中的包
-```
+<FileTree>
+
+- pkgs/
+  - hello.nix            /** 简单包 (文件模式) */
+  - complex-app/         /** 复杂包 (目录模式) */
+    - package.nix        /** -> 必须包含此文件，被识别为包定义 */
+    - src/               /** 其他辅助文件不会被识别为独立包 */
+  - group/               /** 包组 (普通目录) */
+    - scope.nix          /** -> 定义局部作用域 */
+    - utils.nix          /** 辅助文件，非包定义 */
+    - core/
+      - package.nix      /** 子目录中的包 */
+
+</FileTree>
 
 ### Scope 与 callPackage
 
@@ -38,7 +42,10 @@ Flake FHS 使用 Nix 的 `callPackage` 机制来构建软件包。所有包定�
 
 `scope.nix` 文件用于配置 `callPackage` 所使用的 **Scope (上下文包集)**。
 
-*   **作用范围**: `scope.nix` 会影响**同级目录**中的所有包以及**所有子目录**。
+<Aside type="note" title="作用范围">
+`scope.nix` 会影响**同级目录**中的所有包以及**所有子目录**。
+</Aside>
+
 *   **约定格式**: `{ pkgs, inputs, ... }: { scope = ...; args = ...; }`
 
 #### 参数说明
@@ -82,14 +89,16 @@ stdenv.mkDerivation {
 
 #### 示例 1：集成 Python 包 (目录级)
 
-```
-pkgs/
-└── python/
-    ├── scope.nix      # 定义作用域
-    ├── pandas/
-    │   └── package.nix
-    └── numpy.nix      # 文件模式
-```
+<FileTree>
+
+- pkgs/
+  - python/
+    - scope.nix      /** 定义作用域 */
+    - pandas/
+      - package.nix
+    - numpy.nix      /** 文件模式 */
+
+</FileTree>
 
 `pkgs/python/scope.nix`:
 ```nix

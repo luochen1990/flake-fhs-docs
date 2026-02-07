@@ -3,6 +3,8 @@ title: 使用手册
 description: Flake FHS 的完整使用手册，包含快速概览、详细指南和最佳实践
 ---
 
+import { LinkCard, CardGrid, Aside } from '@astrojs/starlight/components';
+
 # Flake FHS 使用手册
 
 Flake FHS 是一个 Nix Flake 框架，旨在通过标准化的目录结构自动生成 flake outputs，减少配置文件的维护成本。
@@ -26,7 +28,9 @@ Flake FHS 是一个 Nix Flake 框架，旨在通过标准化的目录结构自�
 
 ## 2. 详细指南
 
-**新手提示**：你**不需要**一次性读完所有文档。Flake outputs 是按需生成的，只有当你创建了对应的目录时，相关功能才会生效。你可以先从 `hosts` 开始配置你的系统，根据需要再逐步探索其他功能。
+<Aside type="tip" title="新手提示">
+你**不需要**一次性读完所有文档。Flake outputs 是按需生成的，只有当你创建了对应的目录时，相关功能才会生效。你可以先从 `hosts` 开始配置你的系统，根据需要再逐步探索其他功能。
+</Aside>
 
 本手册按推荐学习顺序排列：
 

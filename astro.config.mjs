@@ -30,7 +30,7 @@ export default defineConfig({
 					label: '开始使用',
 					items: [
 						// Landing page is handled automatically, adding guides
-						{ label: '快速概览', link: '/' },
+						{ label: '快速概览', link: '/zh-cn/manual' },
 						{ label: '最佳实践', slug: 'manual-best-practices' },
 					],
 				},
