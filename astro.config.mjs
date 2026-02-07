@@ -1,5 +1,7 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import react from '@astrojs/react';
+import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
@@ -53,5 +55,7 @@ export default defineConfig({
 				// './src/styles/custom.css',
 			],
 		}),
+		react(),
+		tailwind({ applyBaseStyles: false }),
 	],
 });
