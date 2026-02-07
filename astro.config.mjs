@@ -19,6 +19,9 @@ export default defineConfig({
 					lang: 'en',
 				},
 			},
+			logo: {
+				src: './src/assets/logo.svg',
+			},
 			social: {
 				github: 'https://github.com/luochen1990/flake-fhs',
 			},
@@ -52,7 +55,7 @@ export default defineConfig({
 				},
 			],
 			customCss: [
-				// './src/styles/custom.css',
+				'./src/styles/custom.css',
 			],
 		}),
 		react(),

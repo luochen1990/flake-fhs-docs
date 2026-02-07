@@ -1,0 +1,42 @@
+:root {
+	--sl-color-accent-low: #1e1b4b;
+	--sl-color-accent: #6366f1;
+	--sl-color-accent-high: #e0e7ff;
+	--sl-color-white: #ffffff;
+	--sl-color-gray-1: #f3f4f6;
+	--sl-color-gray-2: #e5e7eb;
+	--sl-color-gray-3: #d1d5db;
+	--sl-color-gray-4: #9ca3af;
+	--sl-color-gray-5: #6b7280;
+	--sl-color-gray-6: #4b5563;
+	--sl-color-black: #111827;
+}
+
+/* Custom scrollbar for better look */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--sl-color-gray-6);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--sl-color-gray-4);
+	border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--sl-color-gray-3);
+}
+
+/* Hero image animation */
+.hero img {
+	filter: drop-shadow(0 0 2em var(--sl-color-accent));
+	transition: filter 0.3s;
+}
+
+.hero img:hover {
+	filter: drop-shadow(0 0 3em var(--sl-color-accent-high));
+}
