@@ -3,8 +3,6 @@ title: 全局配置 (Config)
 description: 了解 mkFlake 全局配置选项和 Formatter 代码格式化工具的设置
 ---
 
-# 全局配置 (Global Configuration)
-
 本章节介绍 `flake.nix` 中的 `mkFlake` 全局配置以及其他工具（如 Formatter）的设置。
 
 ## mkFlake 配置

@@ -3,8 +3,6 @@ title: 函数库 (Lib)
 description: 深入了解自定义 Nix 函数库的定义、使用方法和加载分层（Level 0/1/2）
 ---
 
-# 函数库 (Library)
-
 `lib/` 目录下的 Nix 文件被设计为函数库。
 
 ## 机制

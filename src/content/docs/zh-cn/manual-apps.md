@@ -3,8 +3,6 @@ title: 应用程序 (Apps)
 description: 了解如何定义可通过 nix run 直接运行的目标，包括自动推断机制和程序入口点的设置
 ---
 
-# 应用程序 (Applications)
-
 定义可通过 `nix run` 直接运行的目标。映射为 `apps.<system>.<name>`。
 
 ## 核心机制

@@ -3,8 +3,6 @@ title: 测试与检查 (Checks)
 description: 学习如何编写测试与检查用例，用于 nix flake check，包括规范的编写方式和代码示例
 ---
 
-# 测试与检查 (Checks)
-
 用于 `nix flake check`。映射为 `checks.<system>.<name>`。
 
 ## 核心机制

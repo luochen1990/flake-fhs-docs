@@ -3,8 +3,6 @@ title: 开发环境 (Shells)
 description: 了解如何定义开发环境，包括默认环境和指定环境的配置与使用
 ---
 
-# 开发环境 (Development Shells)
-
 定义开发环境 (`devShells`)。映射为 `devShells.<system>.<name>`。
 
 ## 核心机制
