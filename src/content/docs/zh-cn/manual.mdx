@@ -1,68 +1,93 @@
 ---
-title: 使用手册
-description: Flake FHS 的完整使用手册，包含快速概览、详细指南和最佳实践
+title: 快速上手
+description: Flake FHS 核心概念与快速入门指南
 ---
 
-import { LinkCard, CardGrid, Aside } from '@astrojs/starlight/components';
+import { LinkCard, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-Flake FHS 是一个 Nix Flake 框架，旨在通过标准化的目录结构自动生成 flake outputs，减少配置文件的维护成本。
+**为什么需要 Flake FHS？**
 
-## 1. 快速概览
+Nix Flake 提供了极大的自由度，但这往往导致了项目的**可维护性危机**：
+*   **源码难以定位**：要在几百行 `flake.nix` 中找到 `packages.x86_64-linux.app` 对应的源码定义极其困难。
+*   **结构不统一**：每个项目的组织方式都不一样，增加了学习成本。
 
-框架的核心机制是将文件系统的目录结构直接映射为 Nix flake outputs。
+**Flake FHS** 通过引入一套标准的文件系统层次结构 (FHS)，将 Flake Outputs 直接映射到文件系统。**只要看到了目录结构，你就知道对应的 Output 在哪里。**
 
-**目录映射表**
+## 1分钟入门 (Tutorial)
 
-| 目录 | 生成 Output | 对应的 Nix 命令 | 详细文档 |
-| :--- | :--- | :--- | :--- |
-| [`hosts`](#guide-hosts) | `nixosConfigurations.<name>` | `nixos-rebuild switch --flake .#<name>` | [系统配置 (hosts)](/zh-cn/manual-hosts) |
-| [`modules`](#guide-modules) | `nixosModules.<name>` | - | [NixOS 模块 (modules)](/zh-cn/manual-modules) |
-| [`pkgs`](#guide-pkgs) | `packages.<system>.<name>` | `nix build .#<name>` | [软件包 (pkgs)](/zh-cn/manual-pkgs) |
-| [`apps`](#guide-apps) | `apps.<system>.<name>` | `nix run .#<name>` | [应用程序 (apps)](/zh-cn/manual-apps) |
-| [`checks`](#guide-checks) | `checks.<system>.<name>` | `nix flake check .#<name>` | [测试与检查 (checks)](/zh-cn/manual-checks) |
-| [`shells`](#guide-shells) | `devShells.<system>.<name>` | `nix develop .#<name>` | [开发环境 (shells)](/zh-cn/manual-shells) |
-| [`lib`](#guide-lib) | `lib.<name>` | `nix eval .#lib.<name>` | [函数库 (lib)](/zh-cn/manual-lib) |
-| [`templates`](#guide-templates) | `templates.<name>` | `nix flake init --template .#<name>` | [模板 (templates)](/zh-cn/manual-templates) |
+<Steps>
 
-## 2. 详细指南
+1.  **初始化项目**
 
-<Aside type="tip" title="新手提示">
-你**不需要**一次性读完所有文档。Flake outputs 是按需生成的，只有当你创建了对应的目录时，相关功能才会生效。你可以先从 `hosts` 开始配置你的系统，根据需要再逐步探索其他功能。
-</Aside>
+    Flake FHS 提供了多种初始化模板，以适应不同的项目需求：
 
-本手册按推荐学习顺序排列：
+    <Tabs>
+      <TabItem label="全新 Nix 项目" icon="rocket">
+        适用于作为 **nixos-config** 或**纯 Nix 软件包仓库**。
 
-### <span id="guide-hosts">🖥️ 系统配置 (Hosts)</span>
+        <Tabs>
+          <TabItem label="推荐 (短名)" icon="star">
+            **特点**：目录名简洁 (`pkgs`, `hosts`)，符合社区习惯。
 
-定义具体的机器配置（Entrypoints）。
+            ```bash
+            nix flake init --template github:luochen1990/flake-fhs#std
+            ```
+          </TabItem>
+          <TabItem label="标准 (长名)" icon="document">
+            **特点**：目录名完整 (`packages`, `nixosConfigurations`)，严格对应 Nix 术语。
 
-*   **📖 [阅读详细手册 (manual-hosts)](/zh-cn/manual-hosts)**
-*   **📖 [阅读详细手册 (manual-modules)](/zh-cn/manual-modules)**
-*   **📖 [阅读详细手册 (manual-pkgs)](/zh-cn/manual-pkgs)**
-*   **📖 [阅读详细手册 (manual-apps)](/zh-cn/manual-apps)**
-*   **📖 [阅读详细手册 (manual-checks)](/zh-cn/manual-checks)**
-*   **📖 [阅读详细手册 (manual-shells)](/zh-cn/manual-shells)**
-*   **📖 [阅读详细手册 (manual-lib)](/zh-cn/manual-lib)**
-*   **📖 [阅读详细手册 (manual-templates)](/zh-cn/manual-templates)**
-*   **📖 [阅读详细手册 (manual-config)](/zh-cn/manual-config)**
-*   **核心内容**：
-    *   `mkFlake` 选项说明 (`systems`, `nixpkgs.config` 等)。
-    *   代码格式化工具 (`nix fmt`) 的设置。
+            ```bash
+            nix flake init --template github:luochen1990/flake-fhs#standard
+            ```
+          </TabItem>
+          <TabItem label="最小化" icon="minimize">
+            **特点**：仅包含 `flake.nix`，由你自己创建目录结构。
 
-## 3. 最佳实践
+            ```bash
+            nix flake init --template github:luochen1990/flake-fhs#minimal
+            ```
+          </TabItem>
+        </Tabs>
+      </TabItem>
 
-### 项目组织
+      <TabItem label="现有项目集成" icon="puzzle">
+        适用于为**非纯 Nix 项目** (如 Python, Node.js, Rust) 添加 Nix 支持。
 
-*   **遵循约定**：尽量使用框架默认的目录结构，减少自定义配置。
-*   **模块化**：将复杂的系统配置拆分为小的、可复用的模块 (`modules/`)。
-*   **利用封装**：如果一个包需要多个辅助文件，请使用目录模式（即创建 `pkgs/<name>/package.nix`）。该目录下的其他 `.nix` 文件（如 `helper.nix`）不会被自动扫描为独立包，从而保持对外接口的整洁。
+        它会为你生成最小化的 `flake.nix` 和必要的辅助文件，而不干扰现有的项目结构。
 
-### 开发流程
+        ```bash
+        # 将 Nix 支持集成到当前项目
+        nix flake init --template github:luochen1990/flake-fhs#integration
+        ```
+      </TabItem>
+    </Tabs>
 
-*   **快速开始**：总是使用模板 (`nix flake init --template ...`) 来初始化新项目或组件。
-*   **持续检查**：养成运行 `nix flake check` 的习惯，配合 `checks/` 目录下的测试用例。
-*   **格式化**：使用 `nix fmt` 保持代码风格统一。
+2.  **进入开发环境**
 
-### 性能优化
+    Flake FHS 自动管理开发环境：
 
-*   **模块化管理**：对于拥有大量 NixOS 模块的项目，Flake FHS 的模块加载机制（Guarded Modules）可以帮助你更好地组织代码。确保将独立的模块放入带有 `options.nix` 的子目录中，这样只有在 `enable = true` 时才会激活其配置逻辑。
+    ```bash
+    nix develop
+    ```
+
+3.  **添加一个包**
+
+    创建文件 `pkgs/hello.nix`：
+
+    ```nix
+    { pkgs }:
+    pkgs.hello
+    ```
+
+    *无需手动修改 `flake.nix`，框架会自动发现它。*
+
+4.  **构建与运行**
+
+    ```bash
+    nix build .#hello
+    nix run .#hello
+    ```
+
+</Steps>
+
+<LinkCard title="📖 查看完整目录映射表 (Directory Map)" description="包含所有支持的目录及其对应的 Nix 命令对照。" href="/zh-cn/directory-map" />

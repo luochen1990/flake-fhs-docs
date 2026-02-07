@@ -17,21 +17,21 @@ hero:
       variant: secondary
 ---
 
-import { Card, CardGrid, LinkCard, Steps, Icon } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard, FileTree, Badge } from '@astrojs/starlight/components';
 
 ## 什么是 Flake FHS？
 
-**Flake FHS** (Flake Filesystem Hierarchy Standard) 是一个 Nix Flake 框架，通过标准化的目录结构自动生成 flake outputs，旨在解决 Nix 项目配置中的常见痛点：**样板代码重复**、**结构差异巨大**以及**工具链集成难**。
+**Flake FHS** (Flake Filesystem Hierarchy Standard) 是一个 Nix Flake 框架，旨在解决 Nix 项目配置过于自由导致的**源码定位困难**和**可维护性差**的问题。
 
-你只需将文件放入约定的目录，框架会自动处理剩余的工作。
+通过引入标准化的目录结构，它将混乱的 Flake Outputs 重新组织为清晰的文件树，让你一眼就能看懂项目的架构。
 
 ---
 
 ## 核心特性
 
 <CardGrid stagger>
-  <Card title="约定优于配置" icon="document">
-    将文件系统的目录结构直接映射为 Flake Outputs，如 `pkgs/`, `modules/`, `hosts/` 等，目录结构即 API。
+  <Card title="所见即所得" icon="document">
+    解决了原始 Flake 结构过于自由导致的源码定位难题。看到 `pkgs/hello`，你就知道它对应 `packages` 中的 `hello`。
   </Card>
   <Card title="统一构建范式" icon="puzzle">
     无论是软件包、应用程序还是测试用例，均采用统一的 `package.nix` + `callPackage` 机制构建，共享依赖。
@@ -46,63 +46,32 @@ import { Card, CardGrid, LinkCard, Steps, Icon } from '@astrojs/starlight/compon
 
 ---
 
-## 快速导航
+## 规范目录一瞥
 
-<CardGrid>
-  <LinkCard title="最佳实践" description="了解如何高效使用 Flake FHS" href="/zh-cn/manual-best-practices/" />
-  <LinkCard title="系统配置 (Hosts)" description="管理 NixOS 系统配置" href="/zh-cn/manual-hosts/" />
-  <LinkCard title="软件包 (Packages)" description="构建和管理软件包" href="/zh-cn/manual-pkgs/" />
-  <LinkCard title="开发环境 (Shells)" description="定义开发 Shell" href="/zh-cn/manual-shells/" />
-</CardGrid>
+只需将文件放入约定的目录，框架会自动完成剩余工作。
 
----
+<FileTree>
 
-## 5分钟快速上手
+- flake.nix
+- pkgs/
+  - hello.nix         <Badge text="packages.<system>.hello" variant="default" size="small" />
+- apps/
+  - deploy.nix        <Badge text="apps.<system>.deploy" variant="default" size="small" />
+- hosts/
+  - my-machine.nix    <Badge text="nixosConfigurations.my-machine" variant="default" size="small" />
+- modules/
+  - my-module.nix     <Badge text="nixosModules.my-module" variant="default" size="small" />
+- checks/
+  - integration.nix   <Badge text="checks.<system>.integration" variant="default" size="small" />
+- shells/
+  - rust.nix          <Badge text="devShells.<system>.rust" variant="default" size="small" />
+- lib/
+  - my-lib.nix        <Badge text="lib.my-lib" variant="default" size="small" />
+- templates/
+  - basic/            <Badge text="templates.basic" variant="default" size="small" />
 
-<Steps>
+</FileTree>
 
-1.  **初始化项目**
-
-    使用 Flake FHS 提供的标准模板快速开始：
-
-    ```bash
-    nix flake init --template github:luochen1990/flake-fhs#std
-    ```
-
-2.  **配置 flake.nix**
-
-    确保你的 `flake.nix` 引入了 `flake-fhs`：
-
-    ```nix
-    {
-      inputs = {
-        nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-        flake-fhs.url = "github:luochen1990/flake-fhs";
-      };
-
-      outputs = inputs@{ flake-fhs, ... }:
-        flake-fhs.lib.mkFlake { inherit inputs; } {
-          systems = [ "x86_64-linux" ];
-        };
-    }
-    ```
-
-3.  **添加内容**
-
-    创建一个软件包 `pkgs/hello/package.nix`，无需注册，它会被自动发现：
-
-    ```nix
-    { stdenv, fetchurl }:
-    stdenv.mkDerivation {
-      name = "hello-2.10";
-      src = fetchurl { /* ... */ };
-    }
-    ```
-
-4.  **构建**
-
-    ```bash
-    nix build .#hello
-    ```
-
-</Steps>
+<div style="text-align: center; margin-top: 2rem;">
+  <LinkCard title="开始使用 Flake FHS →" href="/zh-cn/manual/" />
+</div>

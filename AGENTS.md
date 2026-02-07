@@ -125,8 +125,24 @@ hero:
 - `<Aside>`: 用于警告、提示 (Note, Tip, Caution, Danger)。
 - `<Tabs>`, `<TabItem>`: 用于多语言或多系统代码切换。
 - `<FileTree>`: 用于展示文件结构。
+- `<Badge>`: 用于状态标记或文件映射说明。
 
-### 6.2 自定义组件
+### 6.2 文件树标注规范 (FileTree Annotations)
+在 `<FileTree>` 中展示文件映射关系（如 Flake Output 映射）时，**严禁**使用文本注释（如 `# -> ...`）。
+应使用 `<Badge>` 组件以获得更好的视觉分离度和整洁感。
+
+**推荐样式**:
+- `size="small"`: 保持精致。
+- `variant="default"`: 使用低调的灰色，避免抢占视觉焦点。
+
+```mdx
+<FileTree>
+  - pkgs/
+    - hello.nix <Badge text="packages.<system>.hello" variant="default" size="small" />
+</FileTree>
+```
+
+### 6.3 自定义组件
 - **位置**: `src/components/`
 - **类型安全**: 必须定义 TypeScript 接口 (`interface Props`)。
 - **样式**: 优先使用 Tailwind CSS（如果已配置）或 Scoped CSS (`<style>`).

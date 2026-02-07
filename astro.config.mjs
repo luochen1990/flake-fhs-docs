@@ -30,8 +30,8 @@ export default defineConfig({
 					label: '开始使用',
 					items: [
 						// Landing page is handled automatically, adding guides
-						{ label: '快速概览', slug: 'manual' },
-						{ label: '最佳实践', slug: 'manual-best-practices' },
+						{ label: '快速上手', slug: 'manual' },
+						{ label: '目录映射表', slug: 'directory-map' },
 					],
 				},
 				{
@@ -51,6 +51,7 @@ export default defineConfig({
 					label: '配置参考',
 					items: [
 						{ label: '全局配置', slug: 'manual-config' },
+						{ label: '最佳实践', slug: 'manual-best-practices' },
 					],
 				},
 			],

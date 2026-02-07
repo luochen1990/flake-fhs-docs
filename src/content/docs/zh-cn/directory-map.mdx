@@ -1,0 +1,32 @@
+---
+title: 目录映射表
+description: Flake FHS 目录结构与 Nix 命令映射速查表
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+**Flake FHS** 的核心机制是将**文件系统目录**直接映射为 **Nix Flake Outputs**。此表列出了所有支持的目录及其对应的 Nix 命令。
+
+<CardGrid>
+  <LinkCard title="🖥️ hosts/" description="系统配置 -> nixosConfigurations.<name>" href="/zh-cn/manual-hosts" />
+  <LinkCard title="🧩 modules/" description="NixOS 模块 -> nixosModules.<name>" href="/zh-cn/manual-modules" />
+  <LinkCard title="📦 pkgs/" description="软件包 -> packages.<system>.<name>" href="/zh-cn/manual-pkgs" />
+  <LinkCard title="🚀 apps/" description="应用程序 -> apps.<system>.<name>" href="/zh-cn/manual-apps" />
+  <LinkCard title="✅ checks/" description="测试与检查 -> checks.<system>.<name>" href="/zh-cn/manual-checks" />
+  <LinkCard title="🛠️ shells/" description="开发环境 -> devShells.<system>.<name>" href="/zh-cn/manual-shells" />
+  <LinkCard title="📚 lib/" description="函数库 -> lib.<name>" href="/zh-cn/manual-lib" />
+  <LinkCard title="📋 templates/" description="项目模板 -> templates.<name>" href="/zh-cn/manual-templates" />
+</CardGrid>
+
+## 详细命令对照
+
+| 目录 | 对应 Output | 说明 | 对应的 Nix 命令 |
+| :--- | :--- | :--- | :--- |
+| [`hosts/`](/zh-cn/manual-hosts) | `nixosConfigurations.<name>` | 系统配置入口 | `nixos-rebuild switch --flake .#<name>` |
+| [`modules/`](/zh-cn/manual-modules) | `nixosModules.<name>` | NixOS 模块 | - (通常被 hosts 引用) |
+| [`pkgs/`](/zh-cn/manual-pkgs) | `packages.<system>.<name>` | 软件包 | `nix build .#<name>` |
+| [`apps/`](/zh-cn/manual-apps) | `apps.<system>.<name>` | 应用程序 | `nix run .#<name>` |
+| [`checks/`](/zh-cn/manual-checks) | `checks.<system>.<name>` | 测试与检查 | `nix flake check .#<name>` |
+| [`shells/`](/zh-cn/manual-shells) | `devShells.<system>.<name>` | 开发环境 | `nix develop .#<name>` |
+| [`lib/`](/zh-cn/manual-lib) | `lib.<name>` | 函数库 | `nix eval .#lib.<name>` |
+| [`templates/`](/zh-cn/manual-templates) | `templates.<name>` | 项目模板 | `nix flake init --template .#<name>` |
