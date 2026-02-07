@@ -12,7 +12,7 @@ description: 了解如何定义开发环境，包括默认环境和指定环境�
 *   支持 `<name>.nix` 文件模式
 *   支持 `scope.nix` 依赖注入
 
-详情请参考 [软件包与作用域文档 (manual-pkgs)](./manual-pkgs)。
+详情请参考 [软件包与作用域文档 (manual-pkgs)](/zh-cn/manual-pkgs)。
 
 ## 代码示例
 

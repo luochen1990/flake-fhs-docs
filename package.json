@@ -7,8 +7,10 @@
     "start": "astro dev",
     "build": "astro check && astro build",
     "preview": "astro preview",
-    "check": "astro check && tsc --noEmit",
-    "check-links": "find src/content/docs -name '*.md*' -exec grep -H '\\.md' {} \\;",
+    "check": "astro check && tsc --noEmit && npm run check:links",
+    "lint:links:internal-refs": "find src/content/docs -name '*.md*' -exec grep -H '\\.md' {} \\;",
+    "check:links:external": "lychee --exclude-scheme file src/content/docs",
+    "check:links": "pnpm run build && lychee --config lychee.toml dist",
     "astro": "astro"
   },
   "dependencies": {

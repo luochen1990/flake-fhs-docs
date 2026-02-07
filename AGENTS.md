@@ -33,7 +33,10 @@
     - `pnpm dev`: 启动本地开发服务器 (默认端口 `4321`)。
     - `pnpm build`: 构建生产环境静态站点。
     - `pnpm preview`: 预览构建后的站点。
-4.  **检查**: `pnpm check` (运行 `astro check` 和 `tsc`，确保类型安全)。
+4.  **检查**: 
+    - `pnpm check`: 运行 `astro check` 和 `tsc`，确保类型安全。
+    - `pnpm check:links`: (基于 Lychee) 构建站点并全面检查所有链接 (内部相对路径 + 外部 URL) 是否有效。推荐在提交前运行。
+    - `pnpm check:links:external`: 快速检查源文件 (`src/`) 中的外部链接有效性。
 
 ## 4. 内容策略 (i18n & SSOT)
 
@@ -99,6 +102,20 @@ hero:
 [主页](/)                   # ❌ 缺少 locale，会跳回根目录
 [主页](/zh-cn/)             # ✅ 显式指定 locale 根路径可用
 ```
+
+### 5.4 自动化链接检查
+
+本项目已集成 **Lychee** 进行全自动链接检测，杜绝 404 死链。
+
+- **全面检查 (推荐)**: `pnpm check:links`
+    - 执行流程: `pnpm build` -> `lychee dist/`
+    - 覆盖范围: 所有内部相对链接、锚点、外部 URL。
+    - 适用场景: CI/CD、Release 前检查。
+- **快速检查**: `pnpm check:links:external`
+    - 执行流程: 扫描 `src/` Markdown 文件。
+    - 覆盖范围: 仅外部 URL (http/https)。
+    - 适用场景: 开发过程中快速验证引用链接。
+- **配置**: 修改根目录 `lychee.toml` 可调整超时、白名单等。
 
 ## 6. 组件与 UI 开发规范
 

@@ -5,6 +5,7 @@ pkgs.mkShell {
     git
     nodejs
     nodePackages.pnpm
+    lychee
   ];
 
   shellHook = ''

@@ -1,0 +1,23 @@
+# Lychee configuration file
+# https://github.com/lycheeverse/lychee
+
+# Check HTML files in the dist directory (after build)
+# include = ["dist/**/*.html"]
+
+# Exclude specific private/local addresses if necessary, 
+# though checking them is often good for ensuring local dev links aren't leaking into prod.
+exclude = [
+    # "http://localhost:.*",
+]
+
+# Check internal links (file://) and external links (http(s)://)
+# scheme = ["http", "https", "file"]
+
+# Base directory for resolving root-relative links (e.g. /foo/bar)
+root_dir = "dist"
+
+# Retry failed requests
+max_retries = 3
+
+# Timeout in seconds
+timeout = 10
