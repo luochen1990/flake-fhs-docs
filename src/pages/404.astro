@@ -9,61 +9,161 @@ import '../styles/404.css';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Page Not Found</title>
 </head>
-<body class="bg-gray-950 text-green-500 font-mono h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-2xl bg-gray-900 rounded-lg shadow-2xl overflow-hidden border border-gray-800">
+<body class="bg-gray-950 text-green-500 font-mono h-screen flex items-center justify-center p-4 selection:bg-green-500 selection:text-gray-950">
+    <div class="w-full max-w-3xl bg-gray-900 rounded-lg shadow-2xl overflow-hidden border border-gray-800">
         <!-- Terminal Header -->
-        <div class="bg-gray-800 px-4 py-2 flex items-center gap-2">
+        <div class="bg-gray-800 px-4 py-2 flex items-center gap-2 border-b border-gray-700">
             <div class="w-3 h-3 rounded-full bg-red-500"></div>
             <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
             <div class="w-3 h-3 rounded-full bg-green-500"></div>
-            <div class="ml-4 text-gray-400 text-sm">user@nixos:~</div>
+            <div class="ml-4 text-gray-400 text-sm font-semibold flex-1 text-center pr-16">user@nixos: ~/fhs-docs/recovery</div>
         </div>
         
         <!-- Terminal Content -->
-        <div class="p-6 space-y-4">
-            <div>
-                <span class="text-blue-400">➜</span>
-                <span class="text-teal-400">~</span>
-                <span class="text-gray-400">$</span>
-                <span class="ml-2">nix build .<span id="path-display" class="opacity-75">/unknown-path</span></span>
-            </div>
+        <div class="p-6 md:p-8 font-mono text-sm md:text-base leading-relaxed">
             
-            <div class="text-red-400">
-                error: flake output attribute '<span id="error-path" class="font-bold">...</span>' not found
+            <!-- Command History -->
+            <div class="mb-6 opacity-75">
+                <div class="flex">
+                    <span class="text-blue-400 font-bold mr-2">➜</span>
+                    <span class="text-teal-400 font-bold mr-2">~</span>
+                    <span class="text-gray-400">$</span>
+                    <span class="ml-2">nix build .<span id="path-display" class="text-gray-300">/unknown-path</span></span>
+                </div>
             </div>
 
-            <div class="pt-4 text-gray-400">
-                Did you mean one of these?
+            <!-- Error Output -->
+            <div class="mb-8 space-y-1">
+                <div class="text-red-500 font-bold">
+                    error: builder for '/nix/store/00000000000000000000000000000000-request-404' failed
+                </div>
+                <div class="text-gray-400">
+                   reason: path '<span id="error-path" class="text-white font-bold">...</span>' does not exist
+                </div>
+                <div class="text-gray-500 text-xs mt-2">
+                    (exit code: 404)
+                </div>
             </div>
 
-            <div class="grid gap-2 pl-4">
-                <a href="/" class="hover:text-green-400 hover:underline flex items-center gap-2 transition-colors">
-                    <span class="text-gray-600">./</span>home
+            <!-- TUI Menu Header -->
+            <div class="border-b border-gray-700 pb-2 mb-4 text-gray-300 flex justify-between items-end">
+                <span>AVAILABLE RECOVERY OPTIONS:</span>
+                <span class="text-xs text-gray-500 hidden md:inline-block">[ Use j/k or ⬆️⬇️ to select, Enter to confirm ]</span>
+            </div>
+
+            <!-- TUI Menu Items -->
+            <div class="space-y-1 outline-none" id="menu-container" tabindex="0">
+                <a href="/" class="menu-item block px-2 py-1 text-gray-300 hover:bg-green-500/20 hover:text-green-300 transition-colors duration-75 flex items-center group" data-index="0">
+                    <span class="indicator w-4 font-bold text-green-400 group-hover:text-green-300 mr-2 opacity-0">&gt;</span>
+                    <span class="text-gray-500 mr-2">./</span>
+                    <span class="font-bold">home</span>
+                    <span class="ml-auto text-xs text-gray-600 group-hover:text-gray-400 hidden sm:block">Index page</span>
                 </a>
-                <a href="/zh-cn/manual" class="hover:text-green-400 hover:underline flex items-center gap-2 transition-colors">
-                    <span class="text-gray-600">./</span>manual
+                
+                <a href="/zh-cn/manual" class="menu-item block px-2 py-1 text-gray-300 hover:bg-green-500/20 hover:text-green-300 transition-colors duration-75 flex items-center group" data-index="1">
+                    <span class="indicator w-4 font-bold text-green-400 group-hover:text-green-300 mr-2 opacity-0">&gt;</span>
+                    <span class="text-gray-500 mr-2">./</span>
+                    <span class="font-bold">manual</span>
+                    <span class="ml-auto text-xs text-gray-600 group-hover:text-gray-400 hidden sm:block">Documentation</span>
                 </a>
-                <a href="https://github.com/luochen1990/flake-fhs" class="hover:text-green-400 hover:underline flex items-center gap-2 transition-colors">
-                    <span class="text-gray-600">./</span>github-repo
+                
+                <a href="https://github.com/luochen1990/flake-fhs" class="menu-item block px-2 py-1 text-gray-300 hover:bg-green-500/20 hover:text-green-300 transition-colors duration-75 flex items-center group" data-index="2">
+                    <span class="indicator w-4 font-bold text-green-400 group-hover:text-green-300 mr-2 opacity-0">&gt;</span>
+                    <span class="text-gray-500 mr-2">./</span>
+                    <span class="font-bold">github-repo</span>
+                    <span class="ml-auto text-xs text-gray-600 group-hover:text-gray-400 hidden sm:block">Source code</span>
                 </a>
             </div>
 
-            <div class="pt-8">
-                <span class="text-blue-400">➜</span>
-                <span class="text-teal-400">~</span>
-                <span class="text-gray-400">$</span>
-                <span class="ml-2 animate-blink">_</span>
+            <!-- Footer Status Line -->
+            <div class="mt-8 pt-4 border-t border-gray-800 flex justify-between text-xs text-gray-500 font-mono">
+                <span>[TUI MODE]</span>
+                <span class="animate-pulse">WAITING FOR INPUT...</span>
             </div>
         </div>
     </div>
 
     <script>
+        // Set dynamic path
         const path = window.location.pathname;
         const pathDisplay = document.getElementById('path-display');
         const errorPath = document.getElementById('error-path');
         
         if (pathDisplay) pathDisplay.innerText = path;
         if (errorPath) errorPath.innerText = path;
+
+        // TUI Navigation Logic
+        const menuItems = document.querySelectorAll('.menu-item');
+        let currentIndex = 0;
+
+        function updateSelection() {
+            menuItems.forEach((item, index) => {
+                const indicator = item.querySelector('.indicator');
+                if (!indicator) return;
+
+                if (index === currentIndex) {
+                    // Selected Style
+                    item.classList.add('bg-green-500', 'text-gray-950');
+                    item.classList.remove('text-gray-300', 'hover:bg-green-500/20', 'hover:text-green-300');
+                    indicator.classList.remove('opacity-0', 'text-green-400');
+                    indicator.classList.add('opacity-100', 'text-gray-950');
+                    
+                    // Update spans inside to handle contrast
+                    const grayText = item.querySelectorAll('.text-gray-500, .text-gray-600');
+                    grayText.forEach(el => {
+                        if (el instanceof HTMLElement) {
+                            el.dataset.originalClass = el.className;
+                            el.className = 'mr-2 text-gray-800 ml-auto text-xs hidden sm:block font-semibold'; 
+                        }
+                    });
+
+                } else {
+                    // Unselected Style
+                    item.classList.remove('bg-green-500', 'text-gray-950');
+                    item.classList.add('text-gray-300', 'hover:bg-green-500/20', 'hover:text-green-300');
+                    indicator.classList.add('opacity-0', 'text-green-400');
+                    indicator.classList.remove('opacity-100', 'text-gray-950');
+                    
+                    // Revert inner spans
+                    const modifiedText = item.querySelectorAll('.text-gray-800');
+                    modifiedText.forEach(el => {
+                        if (el instanceof HTMLElement && el.dataset.originalClass) {
+                            el.className = el.dataset.originalClass;
+                        }
+                    });
+                }
+            });
+        }
+
+        // Initial render
+        updateSelection();
+
+        // Keyboard Event Listener
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'j') {
+                e.preventDefault();
+                currentIndex = (currentIndex + 1) % menuItems.length;
+                updateSelection();
+            } else if (e.key === 'ArrowUp' || e.key === 'k') {
+                e.preventDefault();
+                currentIndex = (currentIndex - 1 + menuItems.length) % menuItems.length;
+                updateSelection();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const currentItem = menuItems[currentIndex];
+                if (currentItem instanceof HTMLAnchorElement) {
+                    window.location.href = currentItem.href;
+                }
+            }
+        });
+
+        // Mouse hover support (syncs with keyboard state)
+        menuItems.forEach((item, index) => {
+            item.addEventListener('mouseenter', () => {
+                currentIndex = index;
+                updateSelection();
+            });
+        });
     </script>
 </body>
 </html>
