@@ -1,62 +1,63 @@
 ---
 title: 应用程序 (Apps)
-description: 了解如何定义可通过 nix run 直接运行的目标，包括自动推断机制和程序入口点的设置
+description: 学习如何定义可通过 nix run 直接运行的应用程序。
 ---
 
-定义可通过 `nix run` 直接运行的目标。映射为 `apps.<system>.<name>`。
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
 
-## 核心机制
+Flake FHS 将 `apps/` 目录下的定义映射为 `apps.<system>.<name>`，让你可以通过 `nix run` 快速运行它们。
 
-`apps/` 目录完全复用 **Scoped Package Tree** 的结构与逻辑：
-*   支持 `package.nix` 目录模式
-*   支持 `<name>.nix` 文件模式
-*   支持 `scope.nix` 包域 (Scope)
+## 快速开始
 
-详情请参考 [软件包 (Packages)](/zh-cn/manual-pkgs) 与 [包域 (Scope)](/zh-cn/manual-pkgs-scope) 文档。
+在 `apps/` 目录下创建一个 `.nix` 文件，返回一个可执行的 Derivation 即可。
 
-区别在于：Flake FHS 会自动将构建出的软件包包装为 App 结构 `{ type = "app"; program = "..."; }`。
+**示例：定义一个简单的静态文件服务器**
 
-## 自动推断机制
-
-框架会尝试自动推断程序的入口点。当然，你也可以通过设置 `meta.mainProgram` 来手动指定。推断优先级如下：
-1.  `meta.mainProgram` (显式指定)
-2.  `pname`
-3.  `name` (去除版本号后缀)
-
-## 代码示例
-
-**1. 文件模式 (`apps/serve.nix`)**
-
-快速启动一个静态文件服务器（典型的 "One-Liner" 应用）：
+`apps/serve.nix`:
 
 ```nix
 { writeShellScriptBin, python3 }:
+
+# 返回一个包含可执行文件的 Derivation
 writeShellScriptBin "serve" ''
   ${python3}/bin/python -m http.server 8080
 ''
 ```
 
-**2. 目录模式 (`apps/sync-docs/package.nix`)**
-
-创建一个文档同步脚本（利用目录模式管理复杂依赖）：
-
-```nix
-{ writeShellScriptBin, rsync, openssh }:
-writeShellScriptBin "sync-docs" ''
-  export PATH="${rsync}/bin:${openssh}/bin:$PATH"
-  
-  SRC="./dist/"
-  DEST="user@server:/var/www/docs"
-  
-  echo "Syncing $SRC to $DEST..."
-  rsync -avz --delete "$SRC" "$DEST"
-  echo "Done!"
-''
-```
-
-## 运行命令
+**运行命令**：
 
 ```bash
 nix run .#serve
-nix run .#sync-docs
 ```
+
+## 自动推断机制
+
+你可能注意到上面的例子中返回的是一个 Package，而不是 Flake 标准要求的 App 结构 (`{ type = "app"; program = "..."; }`)。
+
+这是因为 Flake FHS 提供了**自动适配**功能：
+
+1.  **自动包装**: 框架会自动将你的 Package 包装成 App 结构。
+2.  **入口推断**: 框架会自动推断 `program` (可执行文件路径)。推断优先级如下：
+    1.  `meta.mainProgram` (显式指定)
+    2.  `pname` (包名)
+    3.  `name` (去除版本号后缀)
+
+<Aside type="tip">
+只要你的包名（如 "serve"）与生成的二进制文件名一致，通常不需要额外配置。
+</Aside>
+
+## 目录结构
+
+`apps/` 目录完全复用 **Scoped Package Tree** 模型，这意味着你可以使用目录模式来组织复杂的应用，或者使用 `scope.nix` 来管理依赖。
+
+<FileTree>
+- apps/
+  - serve.nix            <Badge text="简单应用" variant="default" size="small" />
+  - sync-docs/           <Badge text="复杂应用" variant="default" size="small" />
+    - package.nix        <Badge text="定义文件" variant="default" size="small" />
+    - scope.nix          <Badge text="依赖注入" variant="default" size="small" />
+</FileTree>
+
+关于目录模式和 Scope 的详细用法，请参考：
+*   [软件包 (Packages)](/zh-cn/manual-pkgs)
+*   [Scope 与依赖注入](/zh-cn/manual-pkgs-scope)

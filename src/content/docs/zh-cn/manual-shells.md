@@ -1,59 +1,83 @@
 ---
 title: 开发环境 (Shells)
-description: 了解如何定义开发环境，包括默认环境和指定环境的配置与使用
+description: 学习如何定义可复用的开发环境，包括默认环境和指定环境的配置。
 ---
 
-定义开发环境 (`devShells`)。映射为 `devShells.<system>.<name>`。
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
 
-## 核心机制
+Flake FHS 将 `shells/` 目录下的定义映射为 `devShells.<system>.<name>`，提供可复用的开发环境。
 
-`shells/` 目录完全复用 **Scoped Package Tree** 的结构与逻辑：
-*   支持 `package.nix` 目录模式
-*   支持 `<name>.nix` 文件模式
-*   支持 `scope.nix` 包域 (Scope)
+## 快速开始
 
-详情请参考 [软件包 (Packages)](/zh-cn/manual-pkgs) 与 [包域 (Scope)](/zh-cn/manual-pkgs-scope) 文档。
+在 `shells/` 目录下创建一个 `.nix` 文件，返回一个 `mkShell` 环境即可。
 
-## 代码示例
+**示例：定义一个 Rust 开发环境**
 
-### `shells/rust.nix`
-
-映射为 `devShells.<system>.rust`。
+`shells/rust.nix`:
 
 ```nix
 { pkgs }:
+
+# 返回一个 devShell
 pkgs.mkShell {
   name = "rust-dev";
-  buildInputs = with pkgs; [ cargo rustc ];
+  
+  # 添加 cargo 和 rustc 到 shell 环境
+  packages = with pkgs; [ cargo rustc ];
 }
 ```
 
-### `shells/default.nix`
+**运行命令**：
 
-映射为默认的 `nix develop` 环境。
+```bash
+nix develop .#rust
+```
+
+## 默认环境 (default.nix)
+
+`shells/default.nix` 是特殊的，它会被映射为 `devShells.<system>.default`。这意味着你可以直接运行 `nix develop` 而不需要指定名称。
+
+**示例：定义项目的主开发环境**
+
+`shells/default.nix`:
 
 ```nix
 { pkgs }:
+
 pkgs.mkShell {
-  # 从现有包中提取开发环境依赖
-  # (例如：自动获取 my-app 所需的编译器和库)
-  inputsFrom = [ (pkgs.callPackage ../pkgs/my-app/package.nix {}) ];
-  
-  # 添加额外的开发工具
+  # 添加常用开发工具
   packages = with pkgs; [ 
-    just 
-    nixfmt-rfc-style # 官方格式化工具
+    just             # 任务运行器
+    nixfmt-rfc-style # Nix 格式化工具
     nixd             # Nix 语言服务器 (LSP)
   ];
 }
 ```
 
-## 使用命令
+**运行命令**：
 
 ```bash
-# 进入默认环境
 nix develop
-
-# 进入指定环境
-nix develop .#rust
 ```
+
+## 进阶：复用包依赖 (inputsFrom)
+
+通常你的开发环境需要包含应用构建所需的依赖。为了避免重复定义，你可以使用 `inputsFrom` 直接从 `pkgs/` 中提取依赖。
+
+`shells/default.nix`:
+
+```nix
+{ pkgs }:
+
+pkgs.mkShell {
+  # 从现有包中提取构建输入 (buildInputs)
+  # 这样你就能获得 my-app 编译所需的库和工具
+  inputsFrom = [ (pkgs.callPackage ../pkgs/my-app/package.nix {}) ];
+  
+  packages = with pkgs; [ just ];
+}
+```
+
+关于目录模式和依赖注入的详细用法，请参考：
+*   [软件包 (Packages)](/zh-cn/manual-pkgs)
+*   [Scope 与依赖注入](/zh-cn/manual-pkgs-scope)
