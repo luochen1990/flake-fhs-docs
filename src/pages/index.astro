@@ -1,3 +1,69 @@
 ---
-return Astro.redirect('/zh-cn/');
+// 首页根据浏览器语言智能重定向
 ---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecting...</title>
+    <meta name="robots" content="noindex" />
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            background-color: #1a1b1e;
+            color: #c9cbcf;
+        }
+        .container {
+            text-align: center;
+        }
+        .loader {
+            display: inline-block;
+            margin-bottom: 1rem;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #c9cbcf;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .msg { font-size: 1.1em; margin: 0.5em 0; }
+        .sub-msg { font-size: 0.9em; opacity: 0.7; margin: 0; }
+    </style>
+    <script>
+        // Get user's preferred language from browser settings
+        var lang = navigator.language || 'en';
+        
+        // Default to English
+        var target = '/en/';
+        
+        // If language starts with 'zh', redirect to Chinese version
+        if (lang.toLowerCase().indexOf('zh') === 0) {
+            target = '/zh-cn/';
+        }
+        
+        // Execute redirect immediately
+        window.location.replace(target);
+    </script>
+    <!-- Fallback for no-JS environments (default to English) -->
+    <noscript>
+        <meta http-equiv="refresh" content="0;url=/en/" />
+    </noscript>
+</head>
+<body>
+    <div class="container">
+        <div class="loader"></div>
+        <p class="msg">Redirecting / 正在跳转</p>
+        <p class="sub-msg">Detecting language preference...</p>
+    </div>
+</body>
+</html>
