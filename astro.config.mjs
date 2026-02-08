@@ -55,6 +55,7 @@ export default defineConfig({
 					],
 				},
 			],
+			disable404Route: true,
 			customCss: [
 				'./src/styles/custom.css',
 			],
