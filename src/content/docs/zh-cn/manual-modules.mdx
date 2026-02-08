@@ -3,7 +3,7 @@ title: NixOS 模块 (Modules)
 description: 学习如何组织可复用的 NixOS 模块，包括自动发现机制、Guarded Modules 和 Unguarded Modules 的使用
 ---
 
-import { FileTree, Steps, Aside } from '@astrojs/starlight/components';
+import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 `modules/` 目录用于组织可复用的 NixOS 模块。系统将根据目录特征自动分类加载，无需手动维护 `module-list.nix`。
 
@@ -14,16 +14,16 @@ import { FileTree, Steps, Aside } from '@astrojs/starlight/components';
 <FileTree>
 
 - modules/
-  - base/  /** Unguarded: 纯组织容器，会递归扫描 */
-    - shell.nix  /** -> 自动导入 */
-    - users.nix  /** -> 自动导入 */
+  - base/  <Badge text="Unguarded: 纯组织容器" variant="default" size="small" />
+    - shell.nix  <Badge text="自动导入" variant="default" size="small" />
+    - users.nix  <Badge text="自动导入" variant="default" size="small" />
   - services/
-    - web-server/  /** Guarded: 包含 options.nix */
-      - options.nix  /** -> 总是导入 */
-      - config.nix   /** -> 仅当 enable = true 时生效 */
-      - sub-helper/  /** -> 递归扫描并自动导入 */
+    - web-server/  <Badge text="Guarded: 包含 options.nix" variant="default" size="small" />
+      - options.nix  <Badge text="总是导入" variant="default" size="small" />
+      - config.nix   <Badge text="仅当 enable = true 时生效" variant="default" size="small" />
+      - sub-helper/  <Badge text="递归扫描并自动导入" variant="default" size="small" />
   - personal/
-    - config.nix   /** -> 自动导入 */
+    - config.nix   <Badge text="自动导入" variant="default" size="small" />
 
 </FileTree>
 

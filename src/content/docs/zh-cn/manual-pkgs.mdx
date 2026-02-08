@@ -3,7 +3,7 @@ title: 软件包 (Packages)
 description: 深入了解 Scoped Package Tree 模型，包括 Scope 作用域、callPackage 机制和依赖注入
 ---
 
-import { FileTree, Aside } from '@astrojs/starlight/components';
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
 
 Flake FHS 采用统一的 **"Scoped Package Tree"** 模型来处理软件包 (`pkgs`)、应用程序 (`apps`)、开发环境 (`shells`) 和检查 (`checks`)。
 
@@ -20,15 +20,15 @@ Flake FHS 采用统一的 **"Scoped Package Tree"** 模型来处理软件包 (`p
 <FileTree>
 
 - pkgs/
-  - hello.nix            /** 简单包 (文件模式) */
-  - complex-app/         /** 复杂包 (目录模式) */
-    - package.nix        /** -> 必须包含此文件，被识别为包定义 */
-    - src/               /** 其他辅助文件不会被识别为独立包 */
-  - group/               /** 包组 (普通目录) */
-    - scope.nix          /** -> 定义局部作用域 */
-    - utils.nix          /** 辅助文件，非包定义 */
+  - hello.nix            <Badge text="简单包 (文件模式)" variant="default" size="small" />
+  - complex-app/         <Badge text="复杂包 (目录模式)" variant="default" size="small" />
+    - package.nix        <Badge text="必须包含此文件" variant="default" size="small" />
+    - src/               <Badge text="辅助文件" variant="default" size="small" />
+  - group/               <Badge text="包组 (普通目录)" variant="default" size="small" />
+    - scope.nix          <Badge text="定义局部作用域" variant="default" size="small" />
+    - utils.nix          <Badge text="辅助文件" variant="default" size="small" />
     - core/
-      - package.nix      /** 子目录中的包 */
+      - package.nix      <Badge text="子目录中的包" variant="default" size="small" />
 
 </FileTree>
 
@@ -91,10 +91,10 @@ stdenv.mkDerivation {
 
 - pkgs/
   - python/
-    - scope.nix      /** 定义作用域 */
+    - scope.nix      <Badge text="定义作用域" variant="default" size="small" />
     - pandas/
       - package.nix
-    - numpy.nix      /** 文件模式 */
+    - numpy.nix      <Badge text="文件模式" variant="default" size="small" />
 
 </FileTree>
 

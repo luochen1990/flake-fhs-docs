@@ -3,7 +3,7 @@ title: 模板 (Templates)
 description: 了解如何定义和使用模板来快速初始化新项目或组件
 ---
 
-import { FileTree } from '@astrojs/starlight/components';
+import { FileTree, Badge } from '@astrojs/starlight/components';
 
 模板用于快速初始化新项目或组件。映射为 `templates.<name>`。
 
@@ -14,10 +14,10 @@ import { FileTree } from '@astrojs/starlight/components';
 <FileTree>
 
 - templates/
-  - basic/
+  - basic/ <Badge text="templates.basic" variant="default" size="small" />
     - flake.nix
     - README.md
-  - rust/
+  - rust/ <Badge text="templates.rust" variant="default" size="small" />
     - flake.nix
     - cargo.toml
   - python/
