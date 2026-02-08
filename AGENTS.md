@@ -42,10 +42,18 @@
 
 - **主要语言**: **简体中文 (`zh-cn`)** 是文档内容的单一事实来源。
 - **目录结构**:
-    - `src/content/docs/zh-cn/`: 源内容。
+    - `src/content/docs/zh-cn/`: SSOT 文档源内容。
     - `src/content/docs/en/`: 英文翻译。
     - `src/assets/`: 静态资源（图片、Logo 等）。
 - **文件命名**: 使用 kebab-case 命名法（如 `manual-best-practices.md`）。
+
+### 4.1 示例编写原则
+
+文档中引入的示例 (包括但不限于示例代码、示例目录)，必须遵从 **"真实"、"典型"、"小巧"** 三原则：
+
+- **真实 (Real)**: 存在真实场景，而不是瞎编乱造 (比如 pkgs.wget 优于 pkgs.foo)。
+- **典型 (Typical)**: 具备代表性 (大部分时候真的是这么用的)，而不过分 trivial (比如 `{ stdenv }: stdenv.mkDerivation { ... }` 优于 `{ pkgs }: pkgs.hello`)。
+- **小巧 (Compact)**: 体积小，不过分 complex (在能满足真实和典型的前提下,示例能做到越小越好)。
 
 ## 5. 链接维护原则
 
@@ -162,9 +170,9 @@ const { title } = Astro.props;
 
 ## 7. 维护原则
 
+- **源码参考**: 在编写文档时, 请总是 feel free to 访问本地的 `~/ws/flake-fhs` 目录以了解真实的代码实现。
 - **Skill 加载**: 维护此仓库时，**始终**应加载 `astro-coding` skill，以获取 Astro/Starlight 的最佳实践和框架特定指导。
 - **MCP 工具**: 使用 `astro-docs` MCP 工具进行 Astro 文档搜索和查询，确保对框架特性的准确理解。
-- **代码文档同步**: 当 `flake-fhs` 核心功能变更时，**必须**立即更新本文档站。
 - **类型安全**: 保持 `tsconfig.json` 严格模式；自定义组件必须使用 TypeScript。
 - **链接规范**: 严格遵循第 5 节的链接维护原则，确保多语言环境下的正确性。
 - **文档保鲜**: 当架构或技术栈变更时，及时更新本 `AGENTS.md`。
