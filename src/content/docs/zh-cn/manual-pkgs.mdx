@@ -1,157 +1,84 @@
 ---
 title: 软件包 (Packages)
-description: 深入了解 Scoped Package Tree 模型，包括 Scope 作用域、callPackage 机制和依赖注入
+description: 学习如何在 pkgs/ 目录中定义软件包，使用 Scoped Package Tree 模型构建项目特有的包。
 ---
 
 import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
 
-Flake FHS 采用统一的 **"Scoped Package Tree"** 模型来处理软件包 (`pkgs`)、应用程序 (`apps`)、开发环境 (`shells`) 和检查 (`checks`)。
+Flake FHS 的 **Scoped Package Tree** 模型将 `pkgs/` 目录直接映射为 `packages.<system>.<name>`。
 
-本文档详细介绍这一核心模型，它是理解整个框架构建逻辑的基础。
+本文档介绍如何在 `pkgs/` 目录中添加软件包。
 
-## <span id="pkgs">pkgs/ - 软件包</span>
+## <span id="pkgs">基本用法</span>
 
-`pkgs/` 目录用于定义项目特有的软件包，映射为 `packages.<system>.<name>`。它是 Scoped Package Tree 模型的标准实现。
+`pkgs/` 目录用于存放项目自身的软件包定义。
 
 ### 目录结构
 
-遵循类似 `nixpkgs` 的 `by-name` 结构，同时支持单文件定义：
+你可以直接在 `pkgs/` 下创建 `.nix` 文件，或者创建一个包含 `package.nix` 的子目录。
 
 <FileTree>
-
 - pkgs/
   - hello.nix            <Badge text="简单包 (文件模式)" variant="default" size="small" />
   - complex-app/         <Badge text="复杂包 (目录模式)" variant="default" size="small" />
     - package.nix        <Badge text="必须包含此文件" variant="default" size="small" />
     - src/               <Badge text="辅助文件" variant="default" size="small" />
   - group/               <Badge text="包组 (普通目录)" variant="default" size="small" />
-    - scope.nix          <Badge text="定义局部作用域" variant="default" size="small" />
     - utils.nix          <Badge text="辅助文件" variant="default" size="small" />
     - core/
       - package.nix      <Badge text="子目录中的包" variant="default" size="small" />
-
 </FileTree>
 
-### Scope 与 callPackage
+### 编写软件包
 
-Flake FHS 使用 Nix 的 `callPackage` 机制来构建软件包。所有包定义（无论是 `.nix` 文件还是 `package.nix`）都通过 `callPackage` 构建，因此你可以直接声明所需的依赖。
+在 Flake FHS 中，软件包定义就是一个标准的 Nix 函数。它接收依赖项作为参数，并返回一个 Derivation。
 
-#### Scope (作用域)
+**示例：定义一个简单的 Hello World 包**
 
-`scope.nix` 文件用于配置 `callPackage` 所使用的 **Scope (上下文包集)**。
-
-<Aside type="note" title="作用范围">
-`scope.nix` 会影响**同级目录**中的所有包以及**所有子目录**。
-</Aside>
-
-*   **约定格式**: `{ pkgs, inputs, ... }: { scope = ...; args = ...; }`
-
-#### 参数说明
-
-*   **scope**: 指定用于执行 `callPackage` 的基础包集 (Base Scope)。
-    *   例如：`pkgs.python3Packages`。
-    *   如果指定了 `scope`，则会**替换**父级的 scope（切断继承）。
-    *   如果未指定，则默认**继承**父级的 scope。
-*   **args**: 注入到 `callPackage` 的额外参数。
-    *   这些参数会作为 **第二个参数** 传递给 `callPackage`。
-    *   最终，它们可以作为参数直接传递给包定义函数。
-
-#### 参数注入
-
-默认情况下，`callPackage` 的作用域仅包含 `pkgs`。如果你的包需要访问全局参数（如 `self`, `inputs`, `lib`），你需要通过 `scope.nix` 显式注入它们。
-
-例如，注入 `self` 和 `inputs`：
-
-`pkgs/scope.nix`:
+`pkgs/hello.nix`:
 
 ```nix
-{ inputs, self, ... }:
-{
-  # 将 inputs 和 self 注入到 args 中
-  # 这样同级及子目录下的包都可以通过参数接收它们
-  args = { inherit inputs self; };
-}
-```
+{ stdenv, fetchFromGitHub, lib }: 
 
-然后你就可以在包定义中使用它们：
+stdenv.mkDerivation rec {
+  pname = "hello";
+  version = "2.12.1";
 
-```nix
-{ stdenv, inputs, ... }:
-stdenv.mkDerivation {
-  # ... 使用 inputs.nixpkgs ...
-  pname = "my-package";
-  version = inputs.self.shortRev or "dirty";
-}
-```
+  src = fetchFromGitHub {
+    owner = "editorconfig";
+    repo = "editorconfig-core-c";
+    rev = "v${version}";
+    sha256 = "0znh7c2j0... (hash)";
+  };
 
-#### 继承规则
+  installPhase = ''
+    mkdir -p $out/bin
+    cp editorconfig $out/bin/
+  '';
 
-*   **只提供 `args`**: **合并**。继承父级 args，并与当前 args 合并。适合注入公共依赖或配置。
-*   **提供 `scope`**: **替换**。使用提供的 `scope` 作为新基础。适合切换语言生态（如切换到 Python 环境）。注意：即使替换了 Scope，父级目录定义的 `args` 依然会被继承（除非被同名参数覆盖）。
-
-### 示例
-
-#### 示例 1：Python 应用程序 (目录级 Scope)
-
-切换到 Python 包集环境，以便直接访问 python 库。
-
-<FileTree>
-
-- pkgs/
-  - my-tool/
-    - scope.nix      <Badge text="切换到 Python 环境" variant="default" size="small" />
-    - app.nix        <Badge text="主程序" variant="default" size="small" />
-    - helper.nix     <Badge text="辅助库" variant="default" size="small" />
-
-</FileTree>
-
-`pkgs/my-tool/scope.nix`:
-```nix
-{ pkgs, ... }:
-{
-  # 替换模式：将 Base Scope 切换为 Python 3.11 包集
-  # 下级文件中的 callPackage 将从 python311Packages 中查找依赖
-  scope = pkgs.python311Packages;
-}
-```
-
-`pkgs/my-tool/app.nix`:
-```nix
-# 这里可以直接请求 buildPythonApplication 以及 pandas, requests 等 Python 库
-{ buildPythonApplication, pandas, requests, ... }:
-
-buildPythonApplication {
-  pname = "my-data-tool";
-  version = "0.1.0";
-  # ...
-  propagatedBuildInputs = [ pandas requests ];
-}
-```
-
-#### 示例 2：Per-Package 参数注入
-
-为特定包注入版本号或构建开关。
-
-`pkgs/my-app/scope.nix`:
-```nix
-{ inputs, ... }: {
-  args = {
-    # 注入 git commit hash 作为版本号
-    revision = inputs.self.shortRev or "dirty";
-    enableGui = true;
+  meta = with lib; {
+    description = "EditorConfig core library written in C";
+    homepage = "https://editorconfig.org/";
+    license = licenses.bsd2;
   };
 }
 ```
 
-`pkgs/my-app/package.nix`:
-```nix
-{ stdenv, revision, enableGui }: # 直接接收注入的参数
+### 自动依赖注入
 
-stdenv.mkDerivation {
-  pname = "my-app";
-  version = revision;
-  
-  buildFlags = lib.optional enableGui "--enable-gui";
-  # ...
-}
-```
+注意上面的例子中，函数参数 `{ stdenv, fetchFromGitHub, lib }` 并没有显式导入。
+
+这是因为 Flake FHS 会自动从 `nixpkgs` 中查找并注入这些依赖。你只需要声明你需要的包名即可。
+
+<Aside type="tip">
+这种机制称为 `callPackage`。它是 Nix 生态中最核心的依赖管理模式。
+</Aside>
+
+## 高级用法
+
+如果你需要：
+*   切换构建环境（例如使用 `python3Packages` 而不是默认的 `pkgs`）。
+*   注入全局参数（如 `inputs`、`self`）。
+*   自定义目录级变量。
+
+请参考高级指南：[包域 (Scope)](/zh-cn/manual-pkgs-scope)。

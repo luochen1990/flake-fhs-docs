@@ -40,6 +40,7 @@ export default defineConfig({
 						{ label: '系统配置 (Hosts)', slug: 'manual-hosts' },
 						{ label: 'NixOS 模块 (Modules)', slug: 'manual-modules' },
 						{ label: '软件包 (Packages)', slug: 'manual-pkgs' },
+						{ label: '包域 (Scope)', slug: 'manual-pkgs-scope' },
 						{ label: '应用程序 (Apps)', slug: 'manual-apps' },
 						{ label: '测试与检查 (Checks)', slug: 'manual-checks' },
 						{ label: '开发环境 (Shells)', slug: 'manual-shells' },

@@ -1,0 +1,149 @@
+---
+title: 包域 (Scope)
+description: 深入了解 Scoped Package Tree 模型的高级特性：Scope 作用域控制与参数注入
+---
+
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
+
+Flake FHS 的 **Scoped Package Tree** 模型不仅提供了直观的目录结构，还通过 `scope.nix` 提供了强大的上下文控制能力。
+
+本文档详细介绍 `callPackage` 机制、如何通过 `scope.nix` 切换依赖集（如切换到 Python 环境），以及如何注入自定义参数（如 `inputs`）。
+
+## 原理机制
+
+Flake FHS 使用 Nix 的 `callPackage` 机制来构建软件包。
+
+*   **自动注入**: 所有包定义（无论是 `.nix` 文件还是 `package.nix`）都通过 `callPackage` 构建。这意味着你不需要手动导入依赖，只需在函数参数中声明即可。
+*   **上下文感知**: 每个包构建时所使用的 `pkgs` 集合（即 Scope）取决于它所在的目录层级。
+
+## scope.nix 配置
+
+`scope.nix` 文件用于配置当前目录及其子目录的 `callPackage` 上下文。
+
+<FileTree>
+- pkgs/
+  - group/
+    - scope.nix          <Badge text="定义局部作用域" variant="default" size="small" />
+    - package.nix
+    - sub-group/         <Badge text="继承父级配置" variant="default" size="small" />
+</FileTree>
+
+<Aside type="note" title="作用范围">
+`scope.nix` 会影响**同级目录**中的所有包以及**所有子目录**。
+</Aside>
+
+### 文件格式
+
+`scope.nix` 也是一个函数，接收全局参数并返回配置对象：
+
+```nix
+{ pkgs, inputs, ... }: 
+{ 
+  scope = ...; 
+  args = ...; 
+}
+```
+
+### 配置项说明
+
+| 属性 | 说明 | 行为 |
+| :--- | :--- | :--- |
+| **`scope`** | 指定用于 `callPackage` 的基础包集 (Base Scope) | **替换 (Replace)** <br/>如果指定，则替换父级 Scope（但仍继承父级 `args`）。常见用途是切换语言环境（如 `pkgs.python3Packages`）。 |
+| **`args`** | 注入到 `callPackage` 的额外参数 | **合并 (Merge)** <br/>与父级 `args` 合并。用于注入公共依赖、配置开关或 `inputs`。 |
+
+## 常见用法
+
+### 1. 注入全局参数 (如 inputs)
+
+默认情况下，`callPackage` 的作用域仅包含 `nixpkgs` 中的包。如果你的包需要访问全局参数（如 `self`, `inputs`, `lib`），你需要通过 `scope.nix` 显式注入它们。
+
+`pkgs/scope.nix` (通常在根目录或特定子目录):
+
+```nix
+{ inputs, self, ... }:
+{
+  # 将 inputs 和 self 注入到 args 中
+  # 这样同级及子目录下的包都可以通过参数接收它们
+  args = { inherit inputs self; };
+}
+```
+
+然后在包定义中使用：
+
+```nix
+{ stdenv, inputs, ... }: # 直接在参数中接收 inputs
+stdenv.mkDerivation {
+  pname = "my-package";
+  version = inputs.self.shortRev or "dirty";
+  # ...
+}
+```
+
+### 2. 切换语言环境 (如 Python)
+
+切换到特定语言的包集环境，可以简化特定语言应用的打包。
+
+`pkgs/my-tool/scope.nix`:
+```nix
+{ pkgs, ... }:
+{
+  # 替换模式：将 Base Scope 切换为 Python 3.11 包集
+  # 下级文件中的 callPackage 将从 python311Packages 中查找依赖
+  scope = pkgs.python311Packages;
+}
+```
+
+`pkgs/my-tool/app.nix`:
+```nix
+# 这里可以直接请求 buildPythonApplication 以及 pandas, requests 等 Python 库
+# 而不需要写 python3Packages.pandas
+{ buildPythonApplication, pandas, requests, ... }:
+
+buildPythonApplication {
+  pname = "my-data-tool";
+  # ...
+  propagatedBuildInputs = [ pandas requests ];
+}
+```
+
+### 3. 定义目录级变量
+
+你可以在 `scope.nix` 中定义一些共享变量或辅助函数，供该目录下的所有包使用。
+
+`pkgs/internal/scope.nix`:
+```nix
+{ pkgs, ... }:
+{
+  args = {
+    # 定义一个共享版本号
+    commonVersion = "1.2.3";
+    # 定义一个开关
+    enableDebug = true;
+  };
+}
+```
+
+`pkgs/internal/backend.nix`:
+```nix
+{ stdenv, commonVersion, enableDebug, ... }:
+stdenv.mkDerivation {
+  pname = "backend";
+  version = commonVersion;
+  # ...
+}
+```
+
+## 继承规则详解
+
+当目录层级嵌套时，`scope.nix` 的配置遵循以下继承规则：
+
+1.  **Scope (包集)**:
+    *   若当前层级未定义 `scope`：沿用父级 Scope。
+    *   若当前层级定义了 `scope`：**替换**父级 Scope 为新集合。
+
+2.  **Args (参数)**:
+    *   始终是**合并**关系。
+    *   `Final Args = Root Args + ... + Parent Args + Current Args`。
+    *   如果同名参数冲突，子层级的值覆盖父层级。
+
+这种设计确保了你可以在顶层注入通用参数（如 `inputs`），而在底层目录灵活切换特定的构建环境。

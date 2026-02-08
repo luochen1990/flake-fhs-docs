@@ -10,9 +10,9 @@ description: 了解如何定义开发环境，包括默认环境和指定环境�
 `shells/` 目录完全复用 **Scoped Package Tree** 的结构与逻辑：
 *   支持 `package.nix` 目录模式
 *   支持 `<name>.nix` 文件模式
-*   支持 `scope.nix` 依赖注入
+*   支持 `scope.nix` 包域 (Scope)
 
-详情请参考 [软件包与作用域文档 (manual-pkgs)](/zh-cn/manual-pkgs)。
+详情请参考 [软件包 (Packages)](/zh-cn/manual-pkgs) 与 [包域 (Scope)](/zh-cn/manual-pkgs-scope) 文档。
 
 ## 代码示例
 
