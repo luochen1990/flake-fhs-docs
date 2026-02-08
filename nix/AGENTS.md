@@ -144,10 +144,12 @@ flake-fhs-docs/
    - `pnpm install --frozen-lockfile` - 使用冻结的 lockfile 确保依赖版本一致
    - `pnpm build` - 执行生产构建
 2. **Node.js 版本**: 使用 nixpkgs 中最新的 Node.js LTS 版本（nodejs_20）
-3. **pnpm 版本**: 使用 pnpm_9（与项目 pnpm-lock.yaml 版本一致）
+3. **pnpm 版本**: 使用 pnpm（通过 flake-fhs 框架提供）
 4. **网络访问**: 构建过程需要访问 npm registry 下载依赖
    - 设置 `CI=true` 环境变量减少交互
-   - 配置合适的超时时间
+   - 配置 pnpm 减少副作用缓存
 5. **Sharp 原生模块**: sharp 需要编译原生模块，确保构建环境包含 python3
 6. **构建输出**: 静态文件应正确放置到 `$out/share/www`
 7. **源文件**: 使用 `src = ./.` 包含所有源文件，避免过滤问题
+
+注意：项目使用 pnpm 9，而 nixpkgs 中的 pnpm 版本是 10。这可能导致版本不匹配。如果需要严格锁定依赖版本，可以考虑将 pnpm 9 也打包到 nix 中。

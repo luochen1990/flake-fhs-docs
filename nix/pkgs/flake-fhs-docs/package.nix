@@ -2,8 +2,8 @@
   lib,
   stdenv,
   nodejs_20,
-  pnpm_9,
   python3,
+  pnpm,
 }:
 
 let
@@ -13,12 +13,11 @@ stdenv.mkDerivation {
   pname = "flake-fhs-docs";
   inherit version;
 
-  # Use full source path - don't filter anything, let Nix handle it
   src = ./.;
 
   nativeBuildInputs = [
     nodejs_20
-    pnpm_9
+    pnpm
     python3
   ];
 
@@ -27,7 +26,6 @@ stdenv.mkDerivation {
   env = {
     PYTHON = "${python3}/bin/python";
     NODE_ENV = "production";
-    # Ensure pnpm can install without network
     CI = "true";
   };
 
@@ -35,25 +33,18 @@ stdenv.mkDerivation {
     runHook preBuild
 
     echo "=== Build starting ==="
-    echo "Current directory: $(pwd)"
-    echo "Contents:"
-    ls -la
-    echo "===================="
 
-    # Create pnpm config to disable network requests
-    cat > .npmrc <<'EOF'
-    fetch-retries=5
-    fetch-timeout=60000
-    EOF
-
-    # Set HOME for pnpm
+    # Setup HOME
     export HOME=$TMPDIR
-    mkdir -p $HOME/.local/share/pnpm/store/v3
+
+    # Configure pnpm
+    pnpm config set manage-package-manager-versions false
+    pnpm config set side-effects-cache false
 
     # Install dependencies with frozen lockfile
-    pnpm install --frozen-lockfile --no-verify-ssl
+    pnpm install --frozen-lockfile --force --ignore-scripts
 
-    # Build the project
+    # Build project
     pnpm build
 
     runHook postBuild
