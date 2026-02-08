@@ -11,7 +11,16 @@ description: 了解 mkFlake 全局配置选项和 Formatter 代码格式化工�
 
 ```nix
 flake-fhs.lib.mkFlake { inherit inputs; } {
-  # 配置项
+  # 1. 设置支持的系统
+  systems = [ "x86_64-linux" "aarch64-darwin" ];
+
+  # 2. 配置 nixpkgs 实例
+  nixpkgs.config = {
+    allowUnfree = true;
+  };
+  
+  # 3. 自定义目录布局 (可选)
+  # layout.packages.subdirs = [ "pkgs" "my-packages" ];
 }
 ```
 

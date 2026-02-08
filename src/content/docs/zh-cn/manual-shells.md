@@ -35,7 +35,16 @@ pkgs.mkShell {
 ```nix
 { pkgs }:
 pkgs.mkShell {
-  inputsFrom = [ (import ../pkgs/my-app/package.nix { inherit pkgs; }) ];
+  # 从现有包中提取开发环境依赖
+  # (例如：自动获取 my-app 所需的编译器和库)
+  inputsFrom = [ (pkgs.callPackage ../pkgs/my-app/package.nix {}) ];
+  
+  # 添加额外的开发工具
+  packages = with pkgs; [ 
+    just 
+    nixfmt-rfc-style # 官方格式化工具
+    nixd             # Nix 语言服务器 (LSP)
+  ];
 }
 ```
 

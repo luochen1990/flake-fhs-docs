@@ -25,25 +25,38 @@ description: 了解如何定义可通过 nix run 直接运行的目标，包括�
 
 ## 代码示例
 
-**1. 目录模式 (`apps/deploy/package.nix`)**
+**1. 文件模式 (`apps/serve.nix`)**
+
+快速启动一个静态文件服务器（典型的 "One-Liner" 应用）：
 
 ```nix
-{ writeShellScriptBin }:
-writeShellScriptBin "deploy" ''
-  echo "Deploying..."
+{ writeShellScriptBin, python3 }:
+writeShellScriptBin "serve" ''
+  ${python3}/bin/python -m http.server 8080
 ''
 ```
 
-**2. 文件模式 (`apps/hello.nix`)**
+**2. 目录模式 (`apps/sync-docs/package.nix`)**
+
+创建一个文档同步脚本（利用目录模式管理复杂依赖）：
 
 ```nix
-{ pkgs }:
-pkgs.hello
+{ writeShellScriptBin, rsync, openssh }:
+writeShellScriptBin "sync-docs" ''
+  export PATH="${rsync}/bin:${openssh}/bin:$PATH"
+  
+  SRC="./dist/"
+  DEST="user@server:/var/www/docs"
+  
+  echo "Syncing $SRC to $DEST..."
+  rsync -avz --delete "$SRC" "$DEST"
+  echo "Done!"
+''
 ```
 
 ## 运行命令
 
 ```bash
-nix run .#deploy
-nix run .#hello
+nix run .#serve
+nix run .#sync-docs
 ```

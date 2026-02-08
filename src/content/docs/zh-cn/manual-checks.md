@@ -22,26 +22,35 @@ Checks 采用标准的 `callPackage` 机制构建，因此应编写为标准的�
 
 ## 代码示例
 
-假设你已在 `checks/scope.nix` 中注入了 `self` 和 `inputs`。
+假设你已在 `checks/scope.nix` 中注入了 `self`。
 
-### 1. 文件模式 (`checks/fmt.nix`)
+### 1. 格式化检查 (`checks/fmt.nix`)
+
+检查代码格式是否符合规范（典型的 CI 检查任务）：
 
 ```nix
-{ pkgs, self }: # 需在 scope.nix 中注入 self
-pkgs.runCommand "check-fmt" {
-  buildInputs = [ pkgs.nixfmt ];
+{ runCommand, alejandra, self }: # 需在 scope.nix 中注入 self 以访问源码
+runCommand "check-fmt" {
+  buildInputs = [ alejandra ];
 } ''
-  nixfmt --check ${self}
+  echo "Checking Nix formatting..."
+  # 对整个 source tree 进行检查
+  alejandra --check ${self}
   touch $out
 ''
 ```
 
-### 2. 目录模式 (`checks/integration/package.nix`)
+### 2. 集成测试 (`checks/integration/package.nix`)
+
+对核心功能进行冒烟测试（Smoke Test）：
 
 ```nix
-{ pkgs, inputs }: # 需在 scope.nix 中注入 inputs
-pkgs.runCommand "integration-test" {} ''
-  echo "Running tests against ${inputs.nixpkgs.rev}..."
+{ runCommand, hello, ... }:
+runCommand "smoke-test-hello" {
+  buildInputs = [ hello ];
+} ''
+  # 验证 hello 命令能否正常执行并输出预期结果
+  hello | grep "Hello, world!"
   touch $out
 ''
 ```

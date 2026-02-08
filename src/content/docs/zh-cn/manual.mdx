@@ -75,8 +75,10 @@ Nix Flake 提供了极大的自由度，但这往往导致了项目的**可维�
     创建文件 `pkgs/hello.nix`：
 
     ```nix
-    { pkgs }:
-    pkgs.hello
+    { writeShellScriptBin }:
+    writeShellScriptBin "hello" ''
+      echo "Hello, Flake FHS!"
+    ''
     ```
 
     *无需手动修改 `flake.nix`，框架会自动发现它。*

@@ -63,18 +63,24 @@ Flake FHS 使用 Nix 的 `callPackage` 机制来构建软件包。所有包定�
 例如，注入 `self` 和 `inputs`：
 
 `pkgs/scope.nix`:
+
 ```nix
-{ pkgs, self, inputs, lib, ... }:
+{ inputs, self, ... }:
 {
-  scope = lib.mkScope (pkgs // { inherit self inputs lib; });
+  # 将 inputs 和 self 注入到 args 中
+  # 这样同级及子目录下的包都可以通过参数接收它们
+  args = { inherit inputs self; };
 }
 ```
 
 然后你就可以在包定义中使用它们：
+
 ```nix
 { stdenv, inputs, ... }:
 stdenv.mkDerivation {
   # ... 使用 inputs.nixpkgs ...
+  pname = "my-package";
+  version = inputs.self.shortRev or "dirty";
 }
 ```
 
@@ -85,61 +91,67 @@ stdenv.mkDerivation {
 
 ### 示例
 
-#### 示例 1：集成 Python 包 (目录级)
+#### 示例 1：Python 应用程序 (目录级 Scope)
+
+切换到 Python 包集环境，以便直接访问 python 库。
 
 <FileTree>
 
 - pkgs/
-  - python/
-    - scope.nix      <Badge text="定义作用域" variant="default" size="small" />
-    - pandas/
-      - package.nix
-    - numpy.nix      <Badge text="文件模式" variant="default" size="small" />
+  - my-tool/
+    - scope.nix      <Badge text="切换到 Python 环境" variant="default" size="small" />
+    - app.nix        <Badge text="主程序" variant="default" size="small" />
+    - helper.nix     <Badge text="辅助库" variant="default" size="small" />
 
 </FileTree>
 
-`pkgs/python/scope.nix`:
+`pkgs/my-tool/scope.nix`:
 ```nix
 { pkgs, ... }:
 {
-  # 替换模式：切换到 Python 包集
+  # 替换模式：将 Base Scope 切换为 Python 3.11 包集
+  # 下级文件中的 callPackage 将从 python311Packages 中查找依赖
   scope = pkgs.python311Packages;
-
-  # 可选：同时对该 scope 进行 override
-  # args = { ... };
 }
 ```
 
-`pkgs/python/numpy.nix`:
+`pkgs/my-tool/app.nix`:
 ```nix
-# 这里可以直接请求 buildPythonPackage, pytest 等 Python 生态的包
-{ buildPythonPackage, pytest, ... }:
+# 这里可以直接请求 buildPythonApplication 以及 pandas, requests 等 Python 库
+{ buildPythonApplication, pandas, requests, ... }:
 
-buildPythonPackage {
-  pname = "numpy";
+buildPythonApplication {
+  pname = "my-data-tool";
+  version = "0.1.0";
   # ...
+  propagatedBuildInputs = [ pandas requests ];
 }
 ```
 
-#### 示例 2：Per-Package 注入参数
+#### 示例 2：Per-Package 参数注入
 
-你可以在 `package.nix` 旁边放一个 `scope.nix` 来为该特定包注入参数：
+为特定包注入版本号或构建开关。
 
 `pkgs/my-app/scope.nix`:
 ```nix
-{ ... }: {
+{ inputs, ... }: {
   args = {
-    enableFeatureX = true;
-    customVersion = "1.0.0";
+    # 注入 git commit hash 作为版本号
+    revision = inputs.self.shortRev or "dirty";
+    enableGui = true;
   };
 }
 ```
 
 `pkgs/my-app/package.nix`:
 ```nix
-{ stdenv, enableFeatureX, customVersion }: # 这里可以直接接收注入的参数
+{ stdenv, revision, enableGui }: # 直接接收注入的参数
 
 stdenv.mkDerivation {
-  # ... 使用 enableFeatureX 和 customVersion
+  pname = "my-app";
+  version = revision;
+  
+  buildFlags = lib.optional enableGui "--enable-gui";
+  # ...
 }
 ```

@@ -26,16 +26,17 @@ description: 深入了解自定义 Nix 函数库的定义、使用方法和加�
 ### Level 0: 无依赖库 (No Dependency)
 如果文件直接返回一个 Attribute Set，它会被直接合并。
 
-**适用场景**：不依赖 `lib` 和 `pkgs`, 仅依赖 `builtins` 的库。
+**适用场景**：不依赖 `lib` 和 `pkgs`, 仅依赖 `builtins` 的纯逻辑函数。
 
 ```nix
-# lib/basic.nix
+# lib/utils.nix
 {
-  # 纯逻辑函数
-  add = a: b: a + b;
+  # 将属性集转换为列表 (polyfill for builtins.attrsToList)
+  attrsToList = attrs:
+    builtins.map (name: { inherit name; value = attrs.${name}; }) (builtins.attrNames attrs);
 
-  # 依赖 builtins 的函数
-  for = xs: f: builtins.map f xs;
+  # 简单的路径拼接
+  joinPath = parts: builtins.concatStringsSep "/" parts;
 }
 ```
 
@@ -43,16 +44,20 @@ description: 深入了解自定义 Nix 函数库的定义、使用方法和加�
 如果文件返回一个函数，该函数接收 `lib` 作为参数。
 这里的 `lib` 包含了 Nixpkgs 的标准库以及本项目中定义的所有 Level 0 和 Level 1 的自定义函数。
 
-**适用场景**：需要使用标准库函数（如 `lib.foldl'`）或项目内其他工具函数的情况。
+**适用场景**：需要使用标准库函数（如 `mkOption`）或项目内其他工具函数的情况。
 
 ```nix
-# lib/math-list.nix
+# lib/modules.nix
 lib: {
-  # 使用标准库函数
-  sum = lib.foldl' (a: b: a + b) 0;
+  # 自定义 mkOption 快捷方式，常用于 NixOS 模块定义
+  mkBoolOpt = default: lib.mkOption {
+    inherit default;
+    type = lib.types.bool;
+    example = true;
+  };
 
-  # 假设 lib.add 是在另一个文件中定义的
-  inc = x: lib.add x 1;
+  # 使用上一个文件定义的工具函数 (自动注入)
+  mkPath = parts: lib.joinPath (["/etc"] ++ parts);
 }
 ```
 
@@ -61,23 +66,23 @@ lib: {
 这些文件返回一个函数，该函数接收 `pkgs` 作为参数。
 `pkgs` 中包含 `lib` (已包含所有自定义函数) 和所有软件包。
 
-**适用场景**：需要访问软件包（如 `pkgs.jq`, `pkgs.hello`）或特定于系统的配置。
+**适用场景**：构建基于外部工具的辅助函数（如使用 `yj` 转换 YAML）。
 
 ```nix
 # lib/more/yaml.nix
 pkgs: {
-  # yaml.generate :: Path -> AttrSet -> Drv
-  yaml.generate = (pkgs.formats.yaml {}).generate;
+  # 利用 pkgs.formats 生成 YAML 配置文件
+  generate = (pkgs.formats.yaml {}).generate;
 
-  # 定义一个工具函数来读取 YAML 文件并将其转换为 Nix 数据结构
-  # yaml.readFile :: Path -> AttrSet
-  yaml.readFile = yaml-filename: let
-    yj = pkgs.yj;
-    json-file = pkgs.runCommand "yaml-to-json" {buildInputs = [yj];} ''
-      yj -yj < ${yaml-filename} > $out
+  # 读取 YAML 文件并转换为 Nix 属性集
+  # 这是一个典型的 "Impure" 操作封装，利用了 pkgs.runCommand 和 external tools
+  importYaml = path: let
+    json = pkgs.runCommand "yaml-to-json" {
+      buildInputs = [ pkgs.yj ];
+    } ''
+      yj -yj < ${path} > $out
     '';
-  in
-    builtins.fromJSON (builtins.readFile json-file);
+  in builtins.fromJSON (builtins.readFile json);
 }
 ```
 
@@ -91,8 +96,11 @@ pkgs: {
 # modules/my-service/default.nix
 { lib, config, ... }:
 {
-  # 使用自定义函数
-  config.value = lib.add 1 2;
+  # 使用自定义函数简化选项定义
+  options.services.my-service.enable = lib.mkBoolOpt false;
+
+  # 使用自定义路径处理函数
+  config.environment.etc."my-config".text = lib.joinPath ["var" "lib" "data"];
 }
 ```
 
@@ -101,6 +109,7 @@ pkgs: {
 默认情况下，`packages/` 下的文件拿到的 `lib` 是原生的。如需使用自定义函数，需要通过 `scope.nix` 引入。
 
 **第一步：在目录中创建 `scope.nix`**
+
 ```nix
 # packages/scope.nix
 { lib, ... }: # 这里的 lib 是包含自定义函数的 lib
@@ -111,14 +120,22 @@ pkgs: {
 ```
 
 **第二步：在 `package.nix` 中使用**
+
 ```nix
 # packages/my-pkg.nix
-{ stdenv, lib, ... }: # 这里的 lib 是由 scope.nix 传入的
-{
-  buildPhase = ''
-    echo ${toString (lib.add 1 2)} > $out
-  '';
-}
+{ runCommand, lib, ... }: # 这里的 lib 是由 scope.nix 传入的
+runCommand "test-lib" {} ''
+  # 使用自定义函数
+  echo "Path: ${lib.joinPath ["usr" "local" "bin"]}" > $out
+''
+```
+## 调试
+
+你可以使用 `nix eval` 来测试库函数。
+
+```bash
+# 测试 lib.joinPath
+nix eval --raw .#lib.joinPath --apply 'f: f ["a" "b"]'
 ```
 
 ## 调试

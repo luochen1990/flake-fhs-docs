@@ -12,8 +12,8 @@ import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
 <FileTree>
 
 - hosts/
-  - server-a/
-    - configuration.nix   <Badge text="nixosConfigurations.server-a" variant="default" size="small" />
+  - homeserver/
+    - configuration.nix   <Badge text="nixosConfigurations.homeserver" variant="default" size="small" />
   - laptop/
     - default.nix         <Badge text="定义架构元数据 (可选)" variant="default" size="small" />
     - hardware.nix
@@ -33,24 +33,28 @@ import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
 { pkgs, ... }:
 {
   imports = [
-    ./hardware.nix
-    ../shared/common.nix  # 手动导入共享配置
+    ./hardware.nix        # 导入硬件配置
+    ../shared/common.nix  # 导入跨主机共享的通用配置
   ];
 
-  # networking.hostName = "laptop"; # 框架已默认注入，无需手动设置
-  environment.systemPackages = [ pkgs.git ];
+  # networking.hostName = "laptop"; # 框架已根据目录名自动设置，无需重复
+  
+  environment.systemPackages = with pkgs; [ 
+    git 
+    vim 
+  ];
 }
 ```
 
 ## 设置系统架构 (System Architecture)
 
-默认情况下，框架假定主机架构为 `x86_64-linux`。如果需要修改（例如部署到 Raspberry Pi 或 Apple Silicon），需要在主机目录下创建一个 `default.nix` 文件。
+默认情况下，框架假定主机架构为 `x86_64-linux`。如果目标机器是其他架构（如 Apple Silicon），必须创建一个 `default.nix` 文件显式声明。
 
-`hosts/laptop/default.nix`:
+`hosts/macbook/default.nix`:
 
 ```nix
 {
-  system = "aarch64-linux"; # 或 "aarch64-darwin", "x86_64-darwin" 等
+  system = "aarch64-darwin"; # 必须在模块加载前确定架构
 }
 ```
 

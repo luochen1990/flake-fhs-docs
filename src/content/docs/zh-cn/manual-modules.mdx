@@ -77,10 +77,19 @@ import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 ```nix
 { config, pkgs, ... }:
+let 
+  cfg = config.services.web-server;
+in
 {
-  # 无需手动写 config = lib.mkIf config.services.web-server.enable ...
+  # 无需手动写 config = lib.mkIf cfg.enable ...
+  
   systemd.services.web-server = {
-    script = "${pkgs.python3}/bin/python -m http.server ${toString config.services.web-server.port}";
+    description = "Simple Python Web Server";
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      ExecStart = "${pkgs.python3}/bin/python -m http.server ${toString cfg.port}";
+      Restart = "always";
+    };
   };
 }
 ```
