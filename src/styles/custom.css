@@ -40,3 +40,32 @@
 .hero img:hover {
 	filter: drop-shadow(0 0 3em var(--sl-color-accent-high));
 }
+
+/* Fix table layout issues */
+/* Default to Starlight's block/scroll behavior for mobile, but ensure word-break is normal */
+.sl-markdown-content table:not(:where(.not-content *)) {
+	display: block;
+	width: 100%;
+	overflow-x: auto;
+}
+
+/* On larger screens, use standard table layout for better column sizing and use of space */
+@media (min-width: 50rem) {
+	.sl-markdown-content table:not(:where(.not-content *)) {
+		display: table;
+		width: 100%;
+		table-layout: auto;
+	}
+}
+
+.sl-markdown-content table td,
+.sl-markdown-content table th {
+	word-break: normal;
+	overflow-wrap: normal;
+}
+
+.sl-markdown-content table code {
+	word-break: normal;
+	overflow-wrap: normal;
+	white-space: pre-wrap;
+}
