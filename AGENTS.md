@@ -63,6 +63,16 @@
 - **Step 2**: 再展开讲解高级用法、边缘情况或复杂配置。
 - **避免**: 切勿在文章开头将最复杂的完整用法一次性全摆出来，以免增加认知负荷吓跑用户。
 
+### 4.3 术语规范
+
+文档中涉及到 Flake 模块结构时，应统一使用以下术语：
+
+- **单文件包 (Single-file Package)**: 例如 `pkgs/hello.nix`。
+- **子目录包 (Subdirectory Package)**: 例如 `pkgs/hello/package.nix`。
+- **单文件模块 (Single-file Module)**: 例如 `modules/nixos.nix`。
+- **子目录模块 (Subdirectory Module)**: 例如 `modules/nixos/options.nix`。
+- **包域 (Scope)**: 例如 `pkgs/python/scope.nix`。
+
 ## 5. 链接维护原则
 
 Starlight 在多语言环境下对不同位置的链接有明确的行为差异，遵循以下原则确保链接的正确性。
