@@ -1,6 +1,6 @@
 ---
 title: NixOS 模块 (Modules)
-description: 学习如何组织可复用的 NixOS 模块，包括自动发现机制、Guarded Modules 和 Unguarded Modules 的使用
+description: 学习如何组织可复用的 NixOS 模块，包括自动发现机制、单文件模块 (Single-file Modules) 和 子目录模块 (Subdirectory Modules) 的使用
 ---
 
 import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
@@ -9,21 +9,21 @@ import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 ## 目录结构与加载逻辑
 
-框架将目录分为两类：**Guarded** (含 `options.nix`) 和 **Unguarded** (普通目录)。
+框架将模块分为两类：**单文件模块** (Single-file Module) 和 **子目录模块** (Subdirectory Module)。
 
 <FileTree>
 
 - modules/
-  - base/  <Badge text="Unguarded: 纯组织容器" variant="default" size="small" />
-    - shell.nix  <Badge text="自动导入" variant="default" size="small" />
-    - users.nix  <Badge text="自动导入" variant="default" size="small" />
+  - base/  <Badge text="普通目录 (Category)" variant="default" size="small" />
+    - shell.nix  <Badge text="单文件模块" variant="default" size="small" />
+    - users.nix  <Badge text="单文件模块" variant="default" size="small" />
   - services/
-    - web-server/  <Badge text="Guarded: 包含 options.nix" variant="default" size="small" />
+    - web-server/  <Badge text="子目录模块" variant="default" size="small" />
       - options.nix  <Badge text="总是导入" variant="default" size="small" />
       - config.nix   <Badge text="仅当 enable = true 时生效" variant="default" size="small" />
-      - sub-helper/  <Badge text="递归扫描并自动导入" variant="default" size="small" />
+      - sub-helper/  <Badge text="辅助文件" variant="default" size="small" />
   - personal/
-    - config.nix   <Badge text="自动导入" variant="default" size="small" />
+    - config.nix   <Badge text="单文件模块" variant="default" size="small" />
 
 </FileTree>
 
@@ -31,20 +31,24 @@ import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 <Steps>
 
-1.  **Unguarded 目录**:
-    *   如果包含 `default.nix`，则仅导入 `default.nix`（停止递归）。
-    *   否则，导入目录下所有 `.nix` 文件，并递归扫描子目录。
+1.  **单文件模块 (Single-file Module)**:
+    *   任何普通 `.nix` 文件都会被自动导入。
+    *   适用于简单的配置（如开启某个程序、设置某个用户）。
 
-2.  **Guarded 目录** (`options.nix` 存在):
+2.  **子目录模块 (Subdirectory Module)**:
+    *   当目录下存在 `options.nix` 时，该目录被视为**子目录模块**。
     *   **options.nix**: 总是被导入，用于定义选项接口。
     *   **其他文件** (如 `config.nix`, `default.nix` 等): 只有当该模块被**启用**时才会生效。
-        *   这通过内部生成的 `config = lib.mkIf cfg.enable { ... }` 包装器实现。
+        *   框架会自动生成 `config = lib.mkIf cfg.enable { ... }` 包装器来实现这一点。
+
+3.  **普通目录**:
+    *   仅作为组织容器，框架会递归扫描其中的内容。
 
 </Steps>
 
 ## 使用方法
 
-### 定义一个 Guarded 模块
+### 定义一个子目录模块
 
 以 `modules/services/web-server` 为例：
 

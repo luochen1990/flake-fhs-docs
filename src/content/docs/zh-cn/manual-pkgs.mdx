@@ -31,7 +31,7 @@ Flake FHS 的 **Scoped Package Tree** 模型将 `pkgs/` 目录直接映射为 `p
 
 ### 编写软件包
 
-在 Flake FHS 中，软件包定义就是一个标准的 Nix 函数。它接收依赖项作为参数，并返回一个 Derivation。
+在 Flake FHS 中，软件包定义完全遵循 **Nixpkgs 标准规范**。它就是一个标准的 Nix 函数（通常称为 `callPackage` 模式），接收依赖项作为参数，并返回一个 Derivation。这种标准化的设计意味着你可以轻松地将代码贡献给上游 nixpkgs。
 
 **示例：定义一个简单的 Hello World 包**
 
