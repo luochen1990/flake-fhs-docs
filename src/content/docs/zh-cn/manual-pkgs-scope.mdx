@@ -16,7 +16,7 @@ Flake FHS 使用 Nix 的 `callPackage` 机制来构建软件包。
 这里 `callPackage` 的通用的模式是:
 
 ```nix
-some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs
+some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs;
 ```
 
 一般来说, scopePkgs 使用来自 nixpkgs 的顶层包 (pkgs) 即可, 这也是 nixpkgs/pkgs/by-name 的标准做法.
@@ -30,9 +30,9 @@ some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs
 <FileTree>
 - pkgs/
   - python/
-    - scope.nix          <Badge text="定义局部作用域" variant="default" size="small" />
+    - scope.nix          <Badge text="指定包域" variant="default" size="small" />
     - my-python-pkg/
-      - package.nix
+      - package.nix      <Badge text="callPackage 将使用 scope.nix 指定的 scope 和 args" variant="default" size="small" />
 </FileTree>
 
 <Aside type="note" title="作用范围">
@@ -41,7 +41,7 @@ some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs
 
 ### 文件格式
 
-`scope.nix` 也是一个函数，接收全局参数 (systemContext) 并返回配置对象：
+`scope.nix` 也是一个函数，接收全局参数 ([systemContext](manual-config)) 并返回配置对象：
 
 ```nix
 { pkgs, inputs, ... }:

@@ -14,7 +14,7 @@ import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 <FileTree>
 
 - modules/
-  - base/  <Badge text="普通目录 (Category)" variant="default" size="small" />
+  - base/  <Badge text="普通目录" variant="default" size="small" />
     - shell.nix  <Badge text="单文件模块" variant="default" size="small" />
     - users.nix  <Badge text="单文件模块" variant="default" size="small" />
   - services/
@@ -81,12 +81,12 @@ import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 ```nix
 { config, pkgs, ... }:
-let 
+let
   cfg = config.services.web-server;
 in
 {
   # 无需手动写 config = lib.mkIf cfg.enable ...
-  
+
   systemd.services.web-server = {
     description = "Simple Python Web Server";
     wantedBy = [ "multi-user.target" ];
