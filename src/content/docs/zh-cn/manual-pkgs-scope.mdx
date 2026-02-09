@@ -29,10 +29,10 @@ some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs
 
 <FileTree>
 - pkgs/
-  - group/
+  - python/
     - scope.nix          <Badge text="定义局部作用域" variant="default" size="small" />
-    - package.nix
-    - sub-group/         <Badge text="继承父级配置" variant="default" size="small" />
+    - my-python-pkg/
+      - package.nix
 </FileTree>
 
 <Aside type="note" title="作用范围">
@@ -41,13 +41,13 @@ some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs
 
 ### 文件格式
 
-`scope.nix` 也是一个函数，接收全局参数并返回配置对象：
+`scope.nix` 也是一个函数，接收全局参数 (systemContext) 并返回配置对象：
 
 ```nix
-{ pkgs, inputs, ... }: 
-{ 
-  scope = ...; 
-  args = ...; 
+{ pkgs, inputs, ... }:
+{
+  scope = ...;
+  args = ...;
 }
 ```
 

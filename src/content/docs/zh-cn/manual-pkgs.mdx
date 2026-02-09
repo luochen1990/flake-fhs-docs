@@ -19,14 +19,10 @@ Flake FHS 的 **Scoped Package Tree** 模型将 `pkgs/` 目录直接映射为 `p
 
 <FileTree>
 - pkgs/
-  - hello.nix            <Badge text="简单包 (文件模式)" variant="default" size="small" />
-  - complex-app/         <Badge text="复杂包 (目录模式)" variant="default" size="small" />
-    - package.nix        <Badge text="必须包含此文件" variant="default" size="small" />
+  - hello.nix            <Badge text="单文件包 (顶层 .nix 文件)" variant="default" size="small" />
+  - complex-app/         <Badge text="子目录包" variant="default" size="small" />
+    - package.nix        <Badge text="入口文件" variant="default" size="small" />
     - src/               <Badge text="辅助文件" variant="default" size="small" />
-  - group/               <Badge text="包组 (普通目录)" variant="default" size="small" />
-    - utils.nix          <Badge text="辅助文件" variant="default" size="small" />
-    - core/
-      - package.nix      <Badge text="子目录中的包" variant="default" size="small" />
 </FileTree>
 
 ### 编写软件包
@@ -38,7 +34,7 @@ Flake FHS 的 **Scoped Package Tree** 模型将 `pkgs/` 目录直接映射为 `p
 `pkgs/hello.nix`:
 
 ```nix
-{ stdenv, fetchFromGitHub, lib }: 
+{ stdenv, fetchFromGitHub, lib }:
 
 stdenv.mkDerivation rec {
   pname = "hello";
