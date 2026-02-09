@@ -113,18 +113,19 @@ hero:
 
 ### 5.3 Markdown 内容链接
 
-**原则**：使用相对路径，**严禁**包含 `.md` 或 `.mdx` 后缀。
+**原则**：为了确保兼容性和避免多语言路径混乱，本项目统一使用**相对路径**，并配置 `trailingSlash: 'always'` 以确保行为一致。
 
 **推荐格式**：
 ```markdown
-[详情](./manual-pkgs)         # ✅ 相对路径，自动适配当前 locale
-[详情](../manual-hosts)       # ✅ 跨目录相对路径
-[详情](./manual-pkgs#section)  # ✅ 支持锚点
+[详情](../manual-pkgs)        # ✅ 兄弟页面相对路径 (因生成为目录需向上跳一级)
+[详情](./sub-page)           # ✅ 子页面/当前目录相对路径
+[详情](../manual-pkgs#section) # ✅ 支持锚点 (兄弟页面)
 ```
 
 **禁止格式**：
 ```markdown
-[详情](./manual-pkgs.md)  # ❌ 带后缀会导致 404 (Starlight 路由不自动剥离后缀)
+[详情](./manual-pkgs)       # ❌ 兄弟页面误用 (生成后会变为 manual-current/manual-pkgs 导致 404)
+[详情](./manual-pkgs.md)    # ❌ 带后缀会导致 404 (Starlight 路由不自动剥离后缀)
 [主页](/)                   # ❌ 缺少 locale，会跳回根目录
 [主页](/zh-cn/)             # ✅ 显式指定 locale 根路径可用
 ```

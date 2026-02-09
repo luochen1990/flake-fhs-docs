@@ -41,7 +41,7 @@ some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs
 
 ### 文件格式
 
-`scope.nix` 也是一个函数，接收全局参数 ([systemContext](manual-config)) 并返回配置对象：
+`scope.nix` 也是一个函数，接收全局参数 ([systemContext](../manual-config)) 并返回配置对象：
 
 ```nix
 { pkgs, inputs, ... }:
