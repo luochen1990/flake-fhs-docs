@@ -1,0 +1,34 @@
+---
+title: Best Practices
+---
+
+The following are recommended practices for using Flake FHS. Following these principles can help you build more maintainable and better-performing projects.
+
+## Project Organization
+
+*   **Follow Conventions**
+    Try to use the framework's default directory structure and reduce custom configurations. Convention over Configuration is the core philosophy of Flake FHS.
+
+*   **Modularization**
+    Split complex system configurations into small, reusable modules (`modules/`). Avoid piling up all configurations in a huge `configuration.nix`.
+
+*   **Encapsulation**
+    If a package requires multiple helper files, please use **subdirectory packages** (i.e., create `pkgs/<name>/package.nix`). Other `.nix` files (such as `helper.nix`) under that directory will not be automatically scanned as independent packages, thus keeping the external interface clean.
+
+## Development Workflow
+
+*   **Quick Start**
+    Always use templates (`nix flake init --template ...`) to initialize new projects or components, which ensures you get the correct boilerplate code.
+
+*   **Continuous Checking**
+    Get into the habit of running `nix flake check`, coupled with test cases under the `checks/` directory. This helps catch build errors early.
+
+*   **Formatting**
+    Use `nix fmt` to keep code style unified. Consistent code style helps with collaboration.
+
+## Performance Optimization
+
+*   **Modular Management**
+    For projects with a large number of NixOS modules, Flake FHS's module loading mechanism (especially **subdirectory modules**) can help you better organize your code.
+    
+    **Recommendation**: Ensure that independent modules are placed in subdirectories with `options.nix` (i.e., **subdirectory modules**). This way, the configuration logic of the module is loaded only when `enable = true` is explicitly set, significantly reducing the overhead during Nix evaluation.

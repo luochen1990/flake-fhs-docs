@@ -1,0 +1,83 @@
+---
+title: Development Shells (Shells)
+description: Learn how to define reusable development environments, including default and named environment configurations.
+---
+
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
+
+Flake FHS maps definitions under the `shells/` directory to `devShells.<system>.<name>`, providing reusable development environments.
+
+## Quick Start
+
+Create a `.nix` file in the `shells/` directory that returns a `mkShell` environment.
+
+**Example: Define a Rust development environment**
+
+`shells/rust.nix`:
+
+```nix
+{ pkgs }:
+
+# Return a devShell
+pkgs.mkShell {
+  name = "rust-dev";
+  
+  # Add cargo and rustc to shell environment
+  packages = with pkgs; [ cargo rustc ];
+}
+```
+
+**Run command**:
+
+```bash
+nix develop .#rust
+```
+
+## Default Environment (default.nix)
+
+`shells/default.nix` is special, it maps to `devShells.<system>.default`. This means you can run `nix develop` directly without specifying a name.
+
+**Example: Define project's main development environment**
+
+`shells/default.nix`:
+
+```nix
+{ pkgs }:
+
+pkgs.mkShell {
+  # Add common development tools
+  packages = with pkgs; [ 
+    just             # Task runner
+    nixfmt-rfc-style # Nix formatter
+    nixd             # Nix language server (LSP)
+  ];
+}
+```
+
+**Run command**:
+
+```bash
+nix develop
+```
+
+## Advanced: Reuse Package Dependencies (inputsFrom)
+
+Usually your development environment needs to contain dependencies required for application building. To avoid duplicate definitions, you can use `inputsFrom` to extract dependencies directly from `pkgs/`.
+
+`shells/default.nix`:
+
+```nix
+{ pkgs }:
+
+pkgs.mkShell {
+  # Extract build inputs (buildInputs) from existing package
+  # This way you get libraries and tools needed to compile my-app
+  inputsFrom = [ (pkgs.callPackage ../pkgs/my-app/package.nix {}) ];
+  
+  packages = with pkgs; [ just ];
+}
+```
+
+For detailed usage of directory patterns and dependency injection, please refer to:
+*   [Packages](/en/manual-pkgs)
+*   [Specify Scope and Extra Arguments for callPackage](/en/manual-pkgs-scope)

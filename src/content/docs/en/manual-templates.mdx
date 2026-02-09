@@ -1,0 +1,57 @@
+---
+title: Templates
+description: Learn how to define and use templates to quickly initialize new projects or components
+---
+
+import { FileTree, Badge } from '@astrojs/starlight/components';
+
+Templates are used to quickly initialize new projects or components. Mapped to `templates.<name>`.
+
+## Directory Structure
+
+Each **subdirectory** under the `templates/` directory is considered an independent template.
+
+<FileTree>
+
+- templates/
+  - basic/ <Badge text="templates.basic" variant="default" size="small" />
+    - flake.nix
+    - README.md
+  - rust/ <Badge text="templates.rust" variant="default" size="small" />
+    - flake.nix
+    - cargo.toml
+  - python/
+    - ...
+
+</FileTree>
+
+*   **Flat Structure**: Nesting or categorization is not supported, direct mapping of first-level subdirectories.
+*   **Content**: All files in the subdirectory will be used as template content.
+
+## Usage
+
+### Initialize Project
+
+Use `nix flake init` command:
+
+```bash
+# Initialize current directory using template named "basic"
+nix flake init --template <flake-url>#basic
+
+# Example (if flake-fhs is a local input)
+nix flake init --template .#basic
+```
+
+### View Available Templates
+
+Use `nix flake show` to view all templates provided by the current Flake:
+
+```bash
+nix flake show
+```
+
+Or view the description of a specific template (if it has a `description` field):
+
+```bash
+nix flake show --json | jq '.templates'
+```

@@ -1,0 +1,151 @@
+---
+title: Library (Lib)
+description: Deep dive into custom Nix library definitions, usage, and loading levels (Level 0/1/2)
+---
+
+Nix files under the `lib/` directory are designed as function libraries.
+
+## Mechanism
+
+`.nix` files defined under `lib/` (as well as `tools/`, `utils/`) are automatically loaded, and their returned attribute sets are **merged** and have dual purposes:
+
+1.  **External Export**: Exported as `lib` of Flake Output. Can be accessed via `<this-flake>.lib`.
+2.  **Internal Call**:
+    *   **Other library files (Level 1/2)**: Called via argument `lib` (Level 1) or `pkgs.lib` (Level 2).
+    *   **NixOS Modules**: Called via argument `lib` or `self.lib`.
+
+> **Note**:
+> *   **Precedence Rule**: `nixpkgs.lib` has the highest priority when merging. If your function name conflicts with the standard library (e.g., `lib.foldl'`), your implementation will be **overwritten**. Please be sure to check for naming conflicts, and it is recommended to use unique namespaces or prefixes. If you must access the overwritten custom function, access it via `self.lib`.
+> *   The framework **does not** automatically create namespaces based on filenames. All return values of files are directly merged into top-level `lib`.
+> *   **In `packages/`**: By default `pkgs.lib` is still the native Nixpkgs lib, **excluding** custom functions. If you need to use custom libraries in a Package, you need to explicitly introduce them in `scope.nix` (see below).
+
+## Loading Levels
+
+The framework supports three types of library file definitions based on the return value type and location of the file:
+
+### Level 0: No Dependency Library
+
+If the file directly returns an Attribute Set, it will be directly merged.
+
+**Use Case**: Pure logic functions that do not depend on `lib` and `pkgs`, only `builtins`.
+
+```nix
+# lib/utils.nix
+{
+  # Convert attribute set to list (polyfill for builtins.attrsToList)
+  attrsToList = attrs:
+    builtins.map (name: { inherit name; value = attrs.${name}; }) (builtins.attrNames attrs);
+
+  # Simple path joining
+  joinPath = parts: builtins.concatStringsSep "/" parts;
+}
+```
+
+### Level 1: Lib Dependent Library
+
+If the file returns a function that receives `lib` as an argument.
+Here `lib` contains Nixpkgs standard library and all Level 0 and Level 1 custom functions defined in this project.
+
+**Use Case**: Situations where standard library functions (such as `mkOption`) or other utility functions within the project are needed.
+
+```nix
+# lib/modules.nix
+lib: {
+  # Custom mkOption shortcut, commonly used for NixOS module definitions
+  mkBoolOpt = default: lib.mkOption {
+    inherit default;
+    type = lib.types.bool;
+    example = true;
+  };
+
+  # Use utility function defined in previous file (auto-injected)
+  mkPath = parts: lib.joinPath (["/etc"] ++ parts);
+}
+```
+
+### Level 2: Pkgs Dependent Library
+
+**Restricted to files under `lib/more/` directory**.
+These files return a function that receives `pkgs` as an argument.
+`pkgs` contains `lib` (already containing all custom functions) and all packages.
+
+**Use Case**: Building helper functions based on external tools (such as using `yj` to convert YAML).
+
+```nix
+# lib/more/yaml.nix
+pkgs: {
+  # Generate YAML config file using pkgs.formats
+  generate = (pkgs.formats.yaml {}).generate;
+
+  # Read YAML file and convert to Nix attribute set
+  # This is a typical "Impure" operation encapsulation, using pkgs.runCommand and external tools
+  importYaml = path: let
+    json = pkgs.runCommand "yaml-to-json" {
+      buildInputs = [ pkgs.yj ];
+    } ''
+      yj -yj < ${path} > $out
+    '';
+  in builtins.fromJSON (builtins.readFile json);
+}
+```
+
+## Code Examples
+
+### 1. Use in NixOS Module
+
+In Module, custom `lib` can be used directly via argument.
+
+```nix
+# modules/my-service/default.nix
+{ lib, config, ... }:
+{
+  # Simplify option definition using custom function
+  options.services.my-service.enable = lib.mkBoolOpt false;
+
+  # Use custom path handling function
+  config.environment.etc."my-config".text = lib.joinPath ["var" "lib" "data"];
+}
+```
+
+### 2. Use in Packages
+
+By default, the `lib` obtained by files under `packages/` is native. If you need to use custom functions, you need to introduce them via `scope.nix`.
+
+**Step 1: Create `scope.nix` in the directory**
+
+```nix
+# packages/scope.nix
+{ lib, ... }: # Here lib contains custom functions
+{
+  # Pass lib into args so package.nix arguments can receive it
+  args = { inherit lib; };
+}
+```
+
+**Step 2: Use in `package.nix`**
+
+```nix
+# packages/my-pkg.nix
+{ runCommand, lib, ... }: # Here lib is passed from scope.nix
+runCommand "test-lib" {} ''
+  # Use custom function
+  echo "Path: ${lib.joinPath ["usr" "local" "bin"]}" > $out
+''
+```
+## Debugging
+
+You can use `nix eval` to test library functions.
+
+```bash
+# Test lib.joinPath
+nix eval --raw .#lib.joinPath --apply 'f: f ["a" "b"]'
+```
+
+## Debugging
+
+You can use `nix eval` to test library functions.
+
+```bash
+# Test lib.add
+nix eval .#lib.add --apply 'f: f 1 2'
+```

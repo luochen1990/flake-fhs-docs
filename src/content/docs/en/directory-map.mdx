@@ -1,0 +1,32 @@
+---
+title: Directory Map
+description: Cheat sheet for Flake FHS directory structure and Nix command mapping
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+The core mechanism of **Flake FHS** is to directly map **filesystem directories** to **Nix Flake Outputs**. This table lists all supported directories and their corresponding Nix commands.
+
+<CardGrid>
+  <LinkCard title="🖥️ hosts/" description="System Config -> nixosConfigurations.<name>" href="/en/manual-hosts" />
+  <LinkCard title="🧩 modules/" description="NixOS Modules -> nixosModules.<name>" href="/en/manual-modules" />
+  <LinkCard title="📦 pkgs/" description="Packages -> packages.<system>.<name>" href="/en/manual-pkgs" />
+  <LinkCard title="🚀 apps/" description="Applications -> apps.<system>.<name>" href="/en/manual-apps" />
+  <LinkCard title="✅ checks/" description="Checks -> checks.<system>.<name>" href="/en/manual-checks" />
+  <LinkCard title="🛠️ shells/" description="Dev Shells -> devShells.<system>.<name>" href="/en/manual-shells" />
+  <LinkCard title="📚 lib/" description="Library -> lib.<name>" href="/en/manual-lib" />
+  <LinkCard title="📋 templates/" description="Templates -> templates.<name>" href="/en/manual-templates" />
+</CardGrid>
+
+## Detailed Command Mapping
+
+| Directory | Corresponding Output | Description | Corresponding Nix Command |
+| :--- | :--- | :--- | :--- |
+| [`hosts/`](/en/manual-hosts) | `nixosConfigurations.<name>` | System Configuration Entry | `nixos-rebuild switch --flake .#<name>` |
+| [`modules/`](/en/manual-modules) | `nixosModules.<name>` | NixOS Modules | - (Usually referenced by hosts) |
+| [`pkgs/`](/en/manual-pkgs) | `packages.<system>.<name>` | Packages | `nix build .#<name>` |
+| [`apps/`](/en/manual-apps) | `apps.<system>.<name>` | Applications | `nix run .#<name>` |
+| [`checks/`](/en/manual-checks) | `checks.<system>.<name>` | Checks | `nix flake check .#<name>` |
+| [`shells/`](/en/manual-shells) | `devShells.<system>.<name>` | Dev Shells | `nix develop .#<name>` |
+| [`lib/`](/en/manual-lib) | `lib.<name>` | Library | `nix eval .#lib.<name>` |
+| [`templates/`](/en/manual-templates) | `templates.<name>` | Project Templates | `nix flake init --template .#<name>` |

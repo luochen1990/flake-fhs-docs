@@ -1,0 +1,80 @@
+---
+title: Packages
+description: Learn how to define packages in the pkgs/ directory and build project-specific packages using the Scoped Package Tree model.
+---
+
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
+
+Flake FHS's **Scoped Package Tree** model directly maps the `pkgs/` directory to `packages.<system>.<name>`.
+
+This document describes how to add packages to the `pkgs/` directory.
+
+## <span id="pkgs">Basic Usage</span>
+
+The `pkgs/` directory is used to store the project's own package definitions.
+
+### Directory Structure
+
+You can create a `.nix` file directly under `pkgs/` (single-file package), or create a subdirectory containing `package.nix` (subdirectory package).
+
+<FileTree>
+- pkgs/
+  - hello.nix            <Badge text="Single-file Package (Top-level .nix file)" variant="default" size="small" />
+  - complex-app/         <Badge text="Subdirectory Package" variant="default" size="small" />
+    - package.nix        <Badge text="Entry File" variant="default" size="small" />
+    - src/               <Badge text="Helper Files" variant="default" size="small" />
+</FileTree>
+
+### Writing Packages
+
+In Flake FHS, package definitions fully follow the **Nixpkgs Standard Specification**. It is a standard Nix function (usually called `callPackage` pattern) that receives dependencies as arguments and returns a Derivation. This standardized design means you can easily contribute code to upstream nixpkgs.
+
+**Example: Define a simple Hello World package**
+
+`pkgs/hello.nix`:
+
+```nix
+{ stdenv, fetchFromGitHub, lib }:
+
+stdenv.mkDerivation rec {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = fetchFromGitHub {
+    owner = "editorconfig";
+    repo = "editorconfig-core-c";
+    rev = "v${version}";
+    sha256 = "0znh7c2j0... (hash)";
+  };
+
+  installPhase = ''
+    mkdir -p $out/bin
+    cp editorconfig $out/bin/
+  '';
+
+  meta = with lib; {
+    description = "EditorConfig core library written in C";
+    homepage = "https://editorconfig.org/";
+    license = licenses.bsd2;
+  };
+}
+```
+
+### Automatic Dependency Injection
+
+Note that in the example above, the function arguments `{ stdenv, fetchFromGitHub, lib }` are not explicitly imported.
+
+This is because Flake FHS automatically looks up and injects these dependencies from `nixpkgs`. You only need to declare the package names you need.
+
+<Aside type="tip">
+This mechanism is called `callPackage`. It is the core dependency management pattern in the Nix ecosystem.
+</Aside>
+
+## Advanced Usage
+
+If you need to:
+*   Switch build environments (e.g., use `python3Packages` instead of default `pkgs`).
+*   Inject global parameters (e.g., `inputs`, `self`).
+*   Customize directory-level variables.
+
+Please refer to the advanced guide: [Package Scope](/en/manual-pkgs-scope).

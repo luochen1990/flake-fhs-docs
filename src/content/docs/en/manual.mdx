@@ -1,0 +1,87 @@
+---
+title: Quick Start
+description: Flake FHS Core Concepts and Quick Start Guide
+---
+
+import { LinkCard, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**Why Flake FHS?**
+
+Nix Flake provides great freedom, but this often leads to a **maintainability crisis** in projects:
+*   **Hard to locate source code**: It is extremely difficult to find the source code definition corresponding to `packages.x86_64-linux.app` in hundreds of lines of `flake.nix`.
+*   **Inconsistent structure**: Every project is organized differently, increasing the learning cost.
+
+**Flake FHS** introduces a standard Filesystem Hierarchy Standard (FHS) to directly map Flake Outputs to the filesystem. **As long as you see the directory structure, you know where the corresponding Output is.**
+
+## 1 Minute Tutorial
+
+<Steps>
+
+1.  **Initialize Project**
+
+    Flake FHS provides a variety of initialization templates to adapt to different project needs:
+
+    <Tabs>
+      <TabItem label="New Nix Project" icon="rocket">
+        Suitable as a **nixos-config** or **pure Nix package repository**.
+
+        <Tabs>
+          <TabItem label="Recommended (Short Name)" icon="star">
+            **Features**: Concise directory names (`pkgs`, `hosts`), conforming to community habits.
+
+            ```bash
+            nix flake init --template github:luochen1990/flake-fhs#short
+            ```
+          </TabItem>
+          <TabItem label="Standard (Long Name)" icon="document">
+            **Features**: Complete directory names (`packages`, `nixosConfigurations`), strictly corresponding to Nix terminology.
+
+            ```bash
+            nix flake init --template github:luochen1990/flake-fhs#std
+            ```
+          </TabItem>
+          <TabItem label="Minimal" icon="minimize">
+            **Features**: Contains only `flake.nix`, you create the directory structure yourself.
+
+            ```bash
+            nix flake init --template github:luochen1990/flake-fhs#zero
+            ```
+          </TabItem>
+        </Tabs>
+      </TabItem>
+
+      <TabItem label="Existing Project Integration" icon="puzzle">
+        Suitable for adding Nix support to **non-pure Nix projects** (such as Python, Node.js, Rust).
+
+        It will generate a minimal `flake.nix` and necessary auxiliary files for you, without interfering with the existing project structure.
+
+        ```bash
+        # Integrate Nix support into current project
+        nix flake init --template github:luochen1990/flake-fhs#project
+        ```
+      </TabItem>
+    </Tabs>
+
+2.  **Add a Package**
+
+    Create file `pkgs/hello.nix`:
+
+    ```nix
+    { writeShellScriptBin }:
+    writeShellScriptBin "hello" ''
+      echo "Hello, Flake FHS!"
+    ''
+    ```
+
+    *No need to manually modify `flake.nix`, the framework will automatically discover it.*
+
+3.  **Build and Run**
+
+    ```bash
+    nix build .#hello
+    nix run .#hello
+    ```
+
+</Steps>
+
+<LinkCard title="📖 View Complete Directory Map" description="Contains all supported directories and their corresponding Nix command mappings." href="/en/directory-map" />

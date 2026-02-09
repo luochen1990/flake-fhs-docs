@@ -1,0 +1,89 @@
+---
+title: System Configuration (Hosts)
+description: Learn how to define concrete machine configurations (Entrypoints), including directory structure, architecture settings, build deployment, and multi-machine management
+---
+
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
+
+The `hosts/` directory is used to define concrete machine configurations (Entrypoints), mapping to `nixosConfigurations.<name>`.
+
+## Directory Structure
+
+<FileTree>
+
+- hosts/
+  - homeserver/
+    - configuration.nix   <Badge text="nixosConfigurations.homeserver" variant="default" size="small" />
+  - laptop/
+    - default.nix         <Badge text="Define architecture metadata (Optional)" variant="default" size="small" />
+    - hardware.nix
+    - configuration.nix   <Badge text="nixosConfigurations.laptop" variant="default" size="small" />
+  - shared/               <Badge text="(Convention) Store shared config" variant="default" size="small" />
+    - common.nix
+
+</FileTree>
+
+The system automatically looks for `<name>/configuration.nix` as the entry file.
+
+## Code Example
+
+`hosts/laptop/configuration.nix`:
+
+```nix
+{ pkgs, ... }:
+{
+  imports = [
+    ./hardware.nix        # Import hardware configuration
+    ../shared/common.nix  # Import common configuration shared across hosts
+  ];
+
+  # networking.hostName = "laptop"; # Framework automatically sets based on directory name, no need to repeat
+  
+  environment.systemPackages = with pkgs; [ 
+    git 
+    vim 
+  ];
+}
+```
+
+## Setting System Architecture
+
+By default, the framework assumes the host architecture is `x86_64-linux`. If the target machine is another architecture (such as Apple Silicon), you must create a `default.nix` file to explicitly declare it.
+
+`hosts/macbook/default.nix`:
+
+```nix
+{
+  system = "aarch64-darwin"; # Architecture must be determined before module loading
+}
+```
+
+<Aside type="caution">
+Do not set the architecture via `nixpkgs.hostPlatform` in `configuration.nix`. Because Flake FHS pre-instantiates `pkgs` and injects it into module arguments before module loading, internal architecture settings in modules will be ignored. You must inform the framework of the required architecture via `default.nix` before instantiation.
+</Aside>
+
+## Build and Deploy
+
+### Single Machine Deployment
+
+Use standard NixOS commands:
+
+```bash
+# Build and switch
+nixos-rebuild switch --flake .#laptop
+
+# Build only
+nixos-rebuild build --flake .#laptop
+```
+
+### Multi-Machine Deployment (Colmena)
+
+If `colmena.enable = true` is enabled (see Global Configuration), you can use Colmena for efficient multi-machine deployment:
+
+```bash
+# Deploy all hosts
+colmena apply
+
+# Deploy specific host
+colmena apply --on laptop
+```

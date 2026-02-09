@@ -1,0 +1,136 @@
+---
+title: Flake FHS
+description: Official documentation for the Flake FHS framework - automatically generating flake outputs through standardized directory structures
+template: splash
+hero:
+  tagline: Simplify Nix project configuration by automatically generating Nix Flake outputs through a standardized directory structure
+  image:
+    file: ../../../assets/logo.svg
+  actions:
+    - text: Quick Start
+      link: /en/manual/
+      icon: rocket
+      variant: primary
+    - text: View GitHub
+      link: https://github.com/luochen1990/flake-fhs
+      icon: github
+      variant: secondary
+---
+
+import { Card, CardGrid, LinkCard, FileTree, Badge } from '@astrojs/starlight/components';
+
+## What is Flake FHS?
+
+**Flake FHS** (Flake Filesystem Hierarchy Standard) is a Nix Flake framework designed to solve the problems of **difficulty in locating source code** and **poor maintainability** caused by the excessive freedom of Nix project configuration.
+
+By introducing a standardized directory structure, it reorganizes chaotic Flake Outputs into a clear file tree, allowing you to understand the project architecture at a glance.
+
+---
+
+## A Directory Tree is a Flake
+
+Just put the file into the agreed directory, and you automatically get the corresponding Flake Output.
+
+<ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
+  <li style={{ marginBottom: '0.5rem' }}>
+    📄 flake.nix
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 pkgs/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 ripgrep.nix <Badge text="packages.<system>.ripgrep" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 apps/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 deploy.nix <Badge text="apps.<system>.deploy" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 hosts/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>
+          📂 desktop/
+          <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+            <li>📄 configuration.nix <Badge text="nixosConfigurations.desktop" variant="default" size="small" /></li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 modules/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 tailscale.nix <Badge text="nixosModules.tailscale" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 checks/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 smoke-test.nix <Badge text="checks.<system>.smoke-test" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 shells/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 rust.nix <Badge text="devShells.<system>.rust" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 lib/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 utils.nix <Badge text="lib.utils" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 templates/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📂 python-web/ <Badge text="templates.python-web" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+</ul>
+
+---
+
+## Core Features
+
+<CardGrid stagger>
+  <Card title="WYSIWYG" icon="document">
+    Solves the problem of difficult source code location caused by the overly free original Flake structure. Seeing `pkgs/hello`, you know it corresponds to `hello` in `packages`.
+  </Card>
+  <Card title="Unified Build Paradigm" icon="puzzle">
+    Whether it is a package, an application, or a test case, it is built using the uniform `package.nix` + `callPackage` mechanism, sharing dependencies.
+  </Card>
+  <Card title="Smart Module Loading" icon="setting">
+    Automatically recursively discovers NixOS modules under `modules/`. Implements "declare to register, enable to load" for modules.
+  </Card>
+  <Card title="Progressive Adoption" icon="random">
+    Supports hybrid mode. You can let Flake FHS take over only a part of the outputs, while leaving other parts to be defined in the traditional way, achieving smooth migration.
+  </Card>
+  <Card title="Ultimate Developer Experience" icon="laptop">
+    Built-in `treefmt` formatting support. Supports automatically deriving `devShells` from `packages`, allowing one-click entry into the debugging environment without repeated definitions.
+  </Card>
+  <Card title="Colmena Integration" icon="rocket">
+    Out-of-the-box Colmena support. Just turn on the option to use Colmena for efficient multi-host parallel deployment.
+  </Card>
+</CardGrid>
+
+<div style="text-align: center; margin-top: 2rem;">
+  <LinkCard title="Start Using Flake FHS →" href="/en/manual/" />
+</div>

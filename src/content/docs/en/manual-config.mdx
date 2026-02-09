@@ -1,0 +1,66 @@
+---
+title: Global Configuration (Config)
+description: Learn about mkFlake global configuration options and Formatter code formatting tool settings
+---
+
+This chapter introduces the `mkFlake` global configuration in `flake.nix` and settings for other tools (such as Formatter).
+
+## mkFlake Configuration
+
+The `mkFlake` function accepts two arguments: context (`inputs`, `self`, etc.) and configuration module.
+
+```nix
+flake-fhs.lib.mkFlake { inherit inputs; } {
+  # 1. Set supported systems
+  systems = [ "x86_64-linux" "aarch64-darwin" ];
+
+  # 2. Configure nixpkgs instance
+  nixpkgs.config = {
+    allowUnfree = true;
+  };
+  
+  # 3. Custom directory layout (optional)
+  # layout.packages.subdirs = [ "pkgs" "my-packages" ];
+}
+```
+
+### Common Configuration Options
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `systems` | list | standard systems | List of supported system architectures (x86_64-linux, aarch64-darwin, etc.) |
+| `nixpkgs.config` | attrs | `{ allowUnfree = true; }` | Configuration passed to nixpkgs |
+| `layout.roots` | list | `["" "/nix"]` | List of project root directories. Supports aggregating content from multiple directories. |
+| `systemContext` | lambda | `_: {}` | System context generator (`system -> attrs`). The `specialArgs` in the returned attrset will be passed to `nixosSystem`. Supports automatic merging. |
+| `flake` | attrs | `{}` | Merged into generated flake outputs. Used to manually extend or override FHS generated content. |
+
+### Layout Configuration
+
+You can customize the source directory for each type of output via the `layout` option. For example:
+
+```nix
+layout.packages.subdirs = [ "pkgs" "my-packages" ];
+```
+
+This means the framework will scan both `pkgs/` and `my-packages/` directories to look for package definitions.
+
+---
+
+## Formatter - Code Formatting
+
+Flake FHS configures `formatter` output by default, supporting the `nix fmt` command.
+
+### Automatic Detection
+
+Flake FHS integrates `treefmt`. It automatically detects configuration files under the root directory with the following priority:
+
+1.  **`treefmt.nix`**: Preferred. If `inputs` contains `treefmt-nix`, it integrates via that library; otherwise loads Nix configuration directly.
+2.  **`treefmt.toml`**: Uses this TOML file as configuration.
+3.  **No configuration file**: Directly uses default `pkgs.treefmt`.
+
+### Usage
+
+```bash
+# Format all files in the project
+nix fmt
+```

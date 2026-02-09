@@ -1,0 +1,63 @@
+---
+title: Applications (Apps)
+description: Learn how to define applications that can be run directly via nix run.
+---
+
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
+
+Flake FHS maps definitions under the `apps/` directory to `apps.<system>.<name>`, allowing you to quickly run them via `nix run`.
+
+## Quick Start
+
+Create a `.nix` file in the `apps/` directory that returns an executable Derivation.
+
+**Example: Define a simple static file server**
+
+`apps/serve.nix`:
+
+```nix
+{ writeShellScriptBin, python3 }:
+
+# Return a Derivation containing an executable
+writeShellScriptBin "serve" ''
+  ${python3}/bin/python -m http.server 8080
+''
+```
+
+**Run command**:
+
+```bash
+nix run .#serve
+```
+
+## Automatic Inference Mechanism
+
+You may have noticed that the example above returns a Package, not the App structure required by the Flake standard (`{ type = "app"; program = "..."; }`).
+
+This is because Flake FHS provides **automatic adaptation**:
+
+1.  **Auto Wrapping**: The framework automatically wraps your Package into an App structure.
+2.  **Entry Inference**: The framework automatically infers `program` (executable path). The inference priority is as follows:
+    1.  `meta.mainProgram` (Explicitly specified)
+    2.  `pname` (Package name)
+    3.  `name` (Remove version number suffix)
+
+<Aside type="tip">
+As long as your package name (e.g., "serve") is consistent with the generated binary file name, no additional configuration is usually required.
+</Aside>
+
+## Directory Structure
+
+The `apps/` directory fully reuses the **Scoped Package Tree** model, which means you can use directory patterns to organize complex applications, or use `scope.nix` to manage dependencies.
+
+<FileTree>
+- apps/
+  - serve.nix            <Badge text="Simple App" variant="default" size="small" />
+  - sync-docs/           <Badge text="Complex App" variant="default" size="small" />
+    - package.nix        <Badge text="Definition File" variant="default" size="small" />
+    - scope.nix          <Badge text="Dependency Injection" variant="default" size="small" />
+</FileTree>
+
+For detailed usage of directory patterns and Scope, please refer to:
+*   [Packages](/en/manual-pkgs)
+*   [Specify Scope and Extra Arguments for callPackage](/en/manual-pkgs-scope)

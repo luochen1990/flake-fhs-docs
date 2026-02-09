@@ -1,0 +1,79 @@
+---
+title: Checks
+description: Learn how to write CI check tasks and integration tests.
+---
+
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
+
+Flake FHS maps definitions under the `checks/` directory to `checks.<system>.<name>`, used for `nix flake check`.
+
+## Quick Start
+
+Create a `.nix` file in the `checks/` directory that returns a successful Derivation.
+
+**Example: Define a simple smoke test**
+
+`checks/smoke-test-hello.nix`:
+
+```nix
+{ runCommand, hello, ... }:
+
+# Return a Derivation, success means check passed
+runCommand "smoke-test-hello" {
+  buildInputs = [ hello ];
+} ''
+  echo "Testing hello command..."
+  
+  # Verify hello command runs normally and outputs expected result
+  hello | grep "Hello, world!"
+  
+  # Must create output file, otherwise considered build failure
+  touch $out
+''
+```
+
+**Run Check**:
+
+```bash
+nix flake check
+```
+
+## Common Use Case: Formatting Check
+
+A typical CI task is checking code formatting.
+
+`checks/fmt.nix`:
+
+```nix
+{ runCommand, alejandra, self }: # Needs access to inputs.self
+
+runCommand "check-fmt" {
+  buildInputs = [ alejandra ];
+} ''
+  echo "Checking Nix formatting..."
+  
+  # Check the entire source tree
+  alejandra --check ${self}
+  
+  touch $out
+''
+```
+
+<Aside type="note" title="Specify Scope and Extra Arguments for callPackage">
+The example above uses the `self` argument. By default `callPackage` does not include `self`, you need to inject it via `checks/scope.nix`.
+</Aside>
+
+### How to Inject Dependencies
+
+In `checks/scope.nix`:
+
+```nix
+{ inputs, self, ... }:
+{
+  # Inject self and inputs into checks
+  args = { inherit inputs self; };
+}
+```
+
+For detailed usage of dependency injection, please refer to:
+*   [Specify Scope and Extra Arguments for callPackage](/en/manual-pkgs-scope)

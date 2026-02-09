@@ -1,0 +1,156 @@
+---
+title: Package Scope
+description: Deep dive into advanced features of the Scoped Package Tree model -- Scope control and parameter injection
+---
+
+import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
+
+Flake FHS's subdirectory packages are compatible with the `by-name` directory of nixpkgs, and extend it with `scope.nix` to provide fine-grained control over callPackage.
+
+This document details the `callPackage` mechanism, how to switch dependency sets via `scope.nix` (e.g., switching to Python environment), and how to inject custom parameters (e.g., `inputs`).
+
+## Mechanism Principle
+
+Flake FHS uses Nix's `callPackage` mechanism to build packages.
+
+Here is the general pattern of `callPackage`:
+
+```nix
+some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs;
+```
+
+Generally, scopePkgs uses the top-level packages (pkgs) from nixpkgs, which is also the standard practice for nixpkgs/pkgs/by-name.
+
+But sometimes we want to specifically specify `scopePkgs`. What should we do? We can use the `scope.nix` file mechanism provided by Flake FHS.
+
+## scope.nix Configuration
+
+The `scope.nix` file is used to configure the `callPackage` context for the current directory and its subdirectories.
+
+<FileTree>
+- pkgs/
+  - python/
+    - scope.nix          <Badge text="Specify Package Scope" variant="default" size="small" />
+    - my-python-pkg/
+      - package.nix      <Badge text="callPackage uses scope and args specified by scope.nix" variant="default" size="small" />
+</FileTree>
+
+<Aside type="note" title="Scope Range">
+`scope.nix` affects all packages in the **same directory** and **all subdirectories**.
+</Aside>
+
+### File Format
+
+`scope.nix` is also a function that receives global arguments ([systemContext](../manual-config)) and returns a configuration object:
+
+```nix
+{ pkgs, inputs, ... }:
+{
+  scope = ...;
+  args = ...;
+}
+```
+
+### Configuration Options
+
+| Property | Description | Behavior |
+| :--- | :--- | :--- |
+| **`scope`** | Specifies the Base Scope for `callPackage` | **Replace** <br/>If specified, replaces the parent Scope (but still inherits parent `args`). Common use is switching language environments (e.g., `pkgs.python3Packages`). |
+| **`args`** | Extra arguments injected into `callPackage` | **Merge** <br/>Merged with parent `args`. Used to inject common dependencies, configuration switches, or `inputs`. |
+
+## Common Usage
+
+### 1. Inject Global Parameters (e.g., inputs)
+
+By default, the scope of `callPackage` only contains packages in `nixpkgs`. If your package needs to access global parameters (e.g., `self`, `inputs`, `lib`), you need to explicitly inject them via `scope.nix`.
+
+`pkgs/scope.nix` (usually in root or specific subdirectory):
+
+```nix
+{ inputs, self, ... }:
+{
+  # Inject inputs and self into args
+  # So packages in sibling and subdirectories can receive them via arguments
+  args = { inherit inputs self; };
+}
+```
+
+Then use in package definition:
+
+```nix
+{ stdenv, inputs, ... }: # Receive inputs directly in arguments
+stdenv.mkDerivation {
+  pname = "my-package";
+  version = inputs.self.shortRev or "dirty";
+  # ...
+}
+```
+
+### 2. Switch Language Environment (e.g., Python)
+
+Switching to a specific language package set environment can simplify packaging for specific language applications.
+
+`pkgs/my-tool/scope.nix`:
+```nix
+{ pkgs, ... }:
+{
+  # Replacement mode: Switch Base Scope to Python 3.11 package set
+  # callPackage in subordinate files will look up dependencies from python311Packages
+  scope = pkgs.python311Packages;
+}
+```
+
+`pkgs/my-tool/app.nix`:
+```nix
+# Here you can directly request buildPythonApplication and Python libraries like pandas, requests
+# Without writing python3Packages.pandas
+{ buildPythonApplication, pandas, requests, ... }:
+
+buildPythonApplication {
+  pname = "my-data-tool";
+  # ...
+  propagatedBuildInputs = [ pandas requests ];
+}
+```
+
+### 3. Define Directory-Level Variables
+
+You can define some shared variables or helper functions in `scope.nix` for use by all packages in that directory.
+
+`pkgs/internal/scope.nix`:
+```nix
+{ pkgs, ... }:
+{
+  args = {
+    # Define a shared version number
+    commonVersion = "1.2.3";
+    # Define a switch
+    enableDebug = true;
+  };
+}
+```
+
+`pkgs/internal/backend.nix`:
+```nix
+{ stdenv, commonVersion, enableDebug, ... }:
+stdenv.mkDerivation {
+  pname = "backend";
+  version = commonVersion;
+  # ...
+}
+```
+
+## Inheritance Rules Detail
+
+When directory levels are nested, the configuration of `scope.nix` follows these inheritance rules:
+
+1.  **Scope (Package Set)**:
+    *   If current level does not define `scope`: Inherit parent Scope.
+    *   If current level defines `scope`: **Replace** parent Scope with new set.
+
+2.  **Args (Arguments)**:
+    *   Always a **Merge** relationship.
+    *   `Final Args = Root Args + ... + Parent Args + Current Args`.
+    *   If parameter names conflict, child level values override parent level.
+
+This design ensures that you can inject general parameters (like `inputs`) at the top level, while flexibly switching specific build environments in lower-level directories.

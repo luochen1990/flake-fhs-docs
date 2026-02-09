@@ -1,0 +1,111 @@
+---
+title: NixOS Modules
+description: Learn how to organize reusable NixOS modules, including automatic discovery mechanism, Single-file Modules, and Subdirectory Modules usage
+---
+
+import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+The `modules/` directory is used to organize reusable NixOS modules. The system will automatically classify and load them based on directory characteristics, without manually maintaining `module-list.nix`.
+
+## Directory Structure and Loading Logic
+
+The framework divides modules into two categories: **Single-file Module** and **Subdirectory Module**.
+
+<FileTree>
+
+- modules/
+  - base/  <Badge text="Normal Directory" variant="default" size="small" />
+    - shell.nix  <Badge text="Single-file Module" variant="default" size="small" />
+    - users.nix  <Badge text="Single-file Module" variant="default" size="small" />
+  - services/
+    - web-server/  <Badge text="Subdirectory Module" variant="default" size="small" />
+      - options.nix  <Badge text="Always Imported" variant="default" size="small" />
+      - config.nix   <Badge text="Effective only when enable = true" variant="default" size="small" />
+      - sub-helper/  <Badge text="Helper Files" variant="default" size="small" />
+  - personal/
+    - config.nix   <Badge text="Single-file Module" variant="default" size="small" />
+
+</FileTree>
+
+### Loading Rules
+
+<Steps>
+
+1.  **Single-file Module**:
+    *   Any normal `.nix` file will be automatically imported.
+    *   Suitable for simple configuration (such as enabling a program, setting a user).
+
+2.  **Subdirectory Module**:
+    *   When `options.nix` exists in a directory, the directory is considered a **Subdirectory Module**.
+    *   **options.nix**: Always imported, used to define option interfaces.
+    *   **Other files** (e.g., `config.nix`, `default.nix`, etc.): Effective only when the module is **enabled**.
+        *   The framework automatically generates `config = lib.mkIf cfg.enable { ... }` wrapper to achieve this.
+
+3.  **Normal Directory**:
+    *   Only serves as an organization container, the framework will recursively scan its contents.
+
+</Steps>
+
+## Usage
+
+### Define a Subdirectory Module
+
+Take `modules/services/web-server` as an example:
+
+**1. `options.nix`: Define Interface**
+
+<Aside type="caution" title="Strict Mode">
+By default, `optionsMode` is `strict`. You need to explicitly define the full option path (e.g., `options.services.web-server`), and the framework will check if it matches the directory structure.
+</Aside>
+
+<Aside type="tip" title="Auto Enable">
+The framework automatically generates an `enable` option under the module path (if not manually defined).
+</Aside>
+
+```nix
+{ lib, ... }:
+{
+  options.services.web-server = {
+    # Must write out full options.services.web-server
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 8080;
+    };
+  };
+}
+```
+
+**2. `config.nix`: Implementation Logic**
+
+By default, it will be wrapped in `mkIf cfg.enable { ... }`.
+
+```nix
+{ config, pkgs, ... }:
+let
+  cfg = config.services.web-server;
+in
+{
+  # No need to manually write config = lib.mkIf cfg.enable ...
+
+  systemd.services.web-server = {
+    description = "Simple Python Web Server";
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      ExecStart = "${pkgs.python3}/bin/python -m http.server ${toString cfg.port}";
+      Restart = "always";
+    };
+  };
+}
+```
+
+### Use Module
+
+In `hosts/my-machine/configuration.nix`:
+
+```nix
+{
+  # Modules under modules/ have been automatically discovered and imported
+  services.web-server.enable = true;
+  services.web-server.port = 9000;
+}
+```
