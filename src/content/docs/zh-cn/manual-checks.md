@@ -59,7 +59,7 @@ runCommand "check-fmt" {
 ''
 ```
 
-<Aside type="note" title="依赖注入">
+<Aside type="note" title="为 callPackage 指定 Scope 和额外参数">
 上面的例子中使用了 `self` 参数。默认情况下 `callPackage` 不会包含 `self`，你需要通过 `checks/scope.nix` 注入它。
 </Aside>
 
@@ -76,4 +76,4 @@ runCommand "check-fmt" {
 ```
 
 关于依赖注入的详细用法，请参考：
-*   [Scope 与依赖注入](/zh-cn/manual-pkgs-scope)
+*   [为 callPackage 指定 Scope 和额外参数](/zh-cn/manual-pkgs-scope)

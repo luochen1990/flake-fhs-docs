@@ -5,7 +5,7 @@ description: 深入了解 Scoped Package Tree 模型的高级特性：Scope 作�
 
 import { FileTree, Aside, Badge } from '@astrojs/starlight/components';
 
-Flake FHS 的 **Scoped Package Tree** 模型不仅提供了直观的目录结构，还通过 `scope.nix` 提供了强大的上下文控制能力。
+Flake FHS 的子目录包兼容 nixpkgs 的 `by-name` 目录, 并在此基础上扩展了 `scope.nix` 提供了对 callPackage 的精细控制能力。
 
 本文档详细介绍 `callPackage` 机制、如何通过 `scope.nix` 切换依赖集（如切换到 Python 环境），以及如何注入自定义参数（如 `inputs`）。
 
@@ -13,8 +13,15 @@ Flake FHS 的 **Scoped Package Tree** 模型不仅提供了直观的目录结构
 
 Flake FHS 使用 Nix 的 `callPackage` 机制来构建软件包。
 
-*   **自动注入**: 所有包定义（无论是 `.nix` 文件还是 `package.nix`）都通过 `callPackage` 构建。这意味着你不需要手动导入依赖，只需在函数参数中声明即可。
-*   **上下文感知**: 每个包构建时所使用的 `pkgs` 集合（即 Scope）取决于它所在的目录层级。
+这里 `callPackage` 的通用的模式是:
+
+```nix
+some-package = scopePkgs.callPackage /path/to/some-package/package.nix extraArgs
+```
+
+一般来说, scopePkgs 使用来自 nixpkgs 的顶层包 (pkgs) 即可, 这也是 nixpkgs/pkgs/by-name 的标准做法.
+
+但, 有时候我们又想针对性地指定 `scopePkgs`, 怎么办呢?  就可以用 Flake FHS 提供的 `scope.nix` 文件机制.
 
 ## scope.nix 配置
 

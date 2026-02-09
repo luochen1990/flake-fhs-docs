@@ -60,4 +60,4 @@ nix run .#serve
 
 关于目录模式和 Scope 的详细用法，请参考：
 *   [软件包 (Packages)](/zh-cn/manual-pkgs)
-*   [Scope 与依赖注入](/zh-cn/manual-pkgs-scope)
+*   [为 callPackage 指定 Scope 和额外参数](/zh-cn/manual-pkgs-scope)
