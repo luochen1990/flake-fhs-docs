@@ -55,7 +55,12 @@ import { Card, CardGrid, LinkCard, FileTree, Badge } from '@astrojs/starlight/co
     <details>
       <summary style={{ cursor: 'pointer' }}>📂 hosts/</summary>
       <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
-        <li>📄 desktop.nix <Badge text="nixosConfigurations.desktop" variant="default" size="small" /></li>
+        <li>
+          📂 desktop/
+          <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+            <li>📄 configuration.nix <Badge text="nixosConfigurations.desktop" variant="default" size="small" /></li>
+          </ul>
+        </li>
       </ul>
     </details>
   </li>
