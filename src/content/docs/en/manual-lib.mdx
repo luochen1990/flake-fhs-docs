@@ -139,13 +139,7 @@ You can use `nix eval` to test library functions.
 ```bash
 # Test lib.joinPath
 nix eval --raw .#lib.joinPath --apply 'f: f ["a" "b"]'
-```
 
-## Debugging
-
-You can use `nix eval` to test library functions.
-
-```bash
-# Test lib.add
+# Test lib.add (assuming you defined it)
 nix eval .#lib.add --apply 'f: f 1 2'
 ```

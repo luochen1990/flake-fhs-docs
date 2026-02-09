@@ -1,2 +1,3 @@
-build:
-    pnpm build
+check:
+    pnpm build && pnpm check
+

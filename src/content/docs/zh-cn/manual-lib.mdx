@@ -136,13 +136,7 @@ runCommand "test-lib" {} ''
 ```bash
 # 测试 lib.joinPath
 nix eval --raw .#lib.joinPath --apply 'f: f ["a" "b"]'
-```
 
-## 调试
-
-你可以使用 `nix eval` 来测试库函数。
-
-```bash
-# 测试 lib.add
+# 测试 lib.add (假设你定义了它)
 nix eval .#lib.add --apply 'f: f 1 2'
 ```
