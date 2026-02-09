@@ -27,6 +27,82 @@ import { Card, CardGrid, LinkCard, FileTree, Badge } from '@astrojs/starlight/co
 
 ---
 
+## 一颗目录树就是一个Flake
+
+只需将文件放入约定的目录，就自动获得对应的Flake Output
+
+<ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
+  <li style={{ marginBottom: '0.5rem' }}>
+    📄 flake.nix
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 pkgs/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 ripgrep.nix <Badge text="packages.<system>.ripgrep" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 apps/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 deploy.nix <Badge text="apps.<system>.deploy" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 hosts/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 desktop.nix <Badge text="nixosConfigurations.desktop" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 modules/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 tailscale.nix <Badge text="nixosModules.tailscale" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 checks/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 smoke-test.nix <Badge text="checks.<system>.smoke-test" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 shells/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 rust.nix <Badge text="devShells.<system>.rust" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li style={{ marginBottom: '0.5rem' }}>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 lib/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📄 utils.nix <Badge text="lib.utils" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary style={{ cursor: 'pointer' }}>📂 templates/</summary>
+      <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+        <li>📂 python-web/ <Badge text="templates.python-web" variant="default" size="small" /></li>
+      </ul>
+    </details>
+  </li>
+</ul>
+
+---
+
 ## 核心特性
 
 <CardGrid stagger>
@@ -49,34 +125,6 @@ import { Card, CardGrid, LinkCard, FileTree, Badge } from '@astrojs/starlight/co
     开箱即用的 Colmena 支持。只需开启选项，即可利用 Colmena 进行高效的多主机并行部署。
   </Card>
 </CardGrid>
-
----
-
-## 规范目录一瞥
-
-只需将文件放入约定的目录，框架会自动完成剩余工作。
-
-<FileTree>
-
-- flake.nix
-- pkgs/
-  - ripgrep.nix       <Badge text="packages.<system>.ripgrep" variant="default" size="small" />
-- apps/
-  - deploy.nix        <Badge text="apps.<system>.deploy" variant="default" size="small" />
-- hosts/
-  - desktop.nix       <Badge text="nixosConfigurations.desktop" variant="default" size="small" />
-- modules/
-  - tailscale.nix     <Badge text="nixosModules.tailscale" variant="default" size="small" />
-- checks/
-  - smoke-test.nix    <Badge text="checks.<system>.smoke-test" variant="default" size="small" />
-- shells/
-  - rust.nix          <Badge text="devShells.<system>.rust" variant="default" size="small" />
-- lib/
-  - utils.nix         <Badge text="lib.utils" variant="default" size="small" />
-- templates/
-  - python-web/       <Badge text="templates.python-web" variant="default" size="small" />
-
-</FileTree>
 
 <div style="text-align: center; margin-top: 2rem;">
   <LinkCard title="开始使用 Flake FHS →" href="/zh-cn/manual/" />
