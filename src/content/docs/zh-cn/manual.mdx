@@ -30,21 +30,21 @@ Nix Flake 提供了极大的自由度，但这往往导致了项目的**可维�
             **特点**：目录名简洁 (`pkgs`, `hosts`)，符合社区习惯。
 
             ```bash
-            nix flake init --template github:luochen1990/flake-fhs#std
+            nix flake init --template github:luochen1990/flake-fhs#short
             ```
           </TabItem>
           <TabItem label="标准 (长名)" icon="document">
             **特点**：目录名完整 (`packages`, `nixosConfigurations`)，严格对应 Nix 术语。
 
             ```bash
-            nix flake init --template github:luochen1990/flake-fhs#standard
+            nix flake init --template github:luochen1990/flake-fhs#std
             ```
           </TabItem>
           <TabItem label="最小化" icon="minimize">
             **特点**：仅包含 `flake.nix`，由你自己创建目录结构。
 
             ```bash
-            nix flake init --template github:luochen1990/flake-fhs#minimal
+            nix flake init --template github:luochen1990/flake-fhs#zero
             ```
           </TabItem>
         </Tabs>
@@ -57,20 +57,12 @@ Nix Flake 提供了极大的自由度，但这往往导致了项目的**可维�
 
         ```bash
         # 将 Nix 支持集成到当前项目
-        nix flake init --template github:luochen1990/flake-fhs#integration
+        nix flake init --template github:luochen1990/flake-fhs#project
         ```
       </TabItem>
     </Tabs>
 
-2.  **进入开发环境**
-
-    Flake FHS 自动管理开发环境：
-
-    ```bash
-    nix develop
-    ```
-
-3.  **添加一个包**
+2.  **添加一个包**
 
     创建文件 `pkgs/hello.nix`：
 
@@ -83,7 +75,7 @@ Nix Flake 提供了极大的自由度，但这往往导致了项目的**可维�
 
     *无需手动修改 `flake.nix`，框架会自动发现它。*
 
-4.  **构建与运行**
+3.  **构建与运行**
 
     ```bash
     nix build .#hello
