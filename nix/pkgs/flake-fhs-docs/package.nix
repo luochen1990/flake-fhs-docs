@@ -21,6 +21,6 @@ buildNpmPackage {
     description = "Official documentation site for Flake FHS framework";
     homepage = "https://github.com/luochen1990/flake-fhs";
     license = lib.licenses.mit;
-    maintainers = [];
+    maintainers = with lib.maintainers; [ luochen1990 ];
   };
 }

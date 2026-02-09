@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1770430521,
-        "narHash": "sha256-6xwG6tFiEOAjIvyQol5Xira4e6fQb/e25R+uNk0RQqw=",
+        "lastModified": 1770621792,
+        "narHash": "sha256-rdCTunOGXCJQjTbMrNKA259k+FK2GpNgutM+9gfwlpE=",
         "owner": "luochen1990",
         "repo": "flake-fhs",
-        "rev": "94c0b0751b892c06b006968773358c877af63530",
+        "rev": "48d3ac5b8d46516d8adc0bd35b5287813a0c4f6c",
         "type": "github"
       },
       "original": {

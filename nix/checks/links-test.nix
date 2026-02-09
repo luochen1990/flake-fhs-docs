@@ -1,11 +1,20 @@
-{ pkgs, self, ... }:
+{
+  runCommand,
+  lychee,
+  pkgs,
+  ...
+}:
 
-pkgs.runCommand "flake-fhs-docs-links-test" {
-  nativeBuildInputs = [ pkgs.lychee ];
+#Test that all links in the built documentation are valid
 
-  buildCommand = ''
+runCommand "flake-fhs-docs-links-test"
+  {
+    nativeBuildInputs = [ lychee ];
+  }
+
+  ''
     # Get the package path
-    pkg_path="${self.packages.x86_64-linux.flake-fhs-docs}"
+    pkg_path="${pkgs.flake-fhs-docs}"
 
     echo "Testing links in: $pkg_path"
 
@@ -15,8 +24,9 @@ pkgs.runCommand "flake-fhs-docs-links-test" {
         --verbose \
         --no-progress \
         --max-concurrency 10 \
-        --exclude-mail \
         --exclude "localhost" \
+        --offline \
+        --root-dir "$pkg_path/share/www" \
         "$pkg_path/share/www"
     else
       echo "WARNING: Package not built yet, skipping link test"
@@ -25,9 +35,4 @@ pkgs.runCommand "flake-fhs-docs-links-test" {
 
     echo "Links test passed!"
     touch $out
-  '';
-
-  meta = {
-    description = "Test that all links in the built documentation are valid";
-  };
-}
+  ''
