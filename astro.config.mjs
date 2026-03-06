@@ -33,7 +33,7 @@ export default defineConfig({
 						en: 'Getting Started',
 					},
 					items: [
-						// Landing page is handled automatically, adding guides
+						{ slug: 'why-flake-fhs' },
 						{ slug: 'manual' },
 						{ slug: 'directory-map' },
 					],

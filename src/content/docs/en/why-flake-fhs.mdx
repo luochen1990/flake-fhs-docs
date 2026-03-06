@@ -1,0 +1,598 @@
+---
+title: Understanding Flake FHS
+description: Deep dive into problems with traditional Nix Flake development and how Flake FHS solves them
+---
+
+## Traditional Nix Flake Development
+
+When developing with Nix Flakes, you need to handle various boilerplate code in `flake.nix`.
+
+### Problem 1: Repeated Boilerplate Code
+
+Adding a package typically requires a `flake.nix` like this:
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+  outputs = { self, nixpkgs }:
+    let
+      systems = [ "x86_64-linux" "aarch64-linux" ];
+      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f {
+        pkgs = import nixpkgs { inherit system; };
+      });
+    in
+    {
+      packages = forAllSystems ({ pkgs }: {
+        hello = pkgs.writeShellScriptBin "hello" ''
+          echo "Hello from Flake FHS!"
+        '';
+      });
+    };
+}
+```
+
+This code has the following issues:
+
+- The `forAllSystems` pattern is repeated in every project
+- System traversal logic is mixed with package definitions
+- Adding new packages requires modifying `flake.nix`, which is error-prone
+
+### Problem 2: Difficult Source Code Location
+
+Suppose you see a project with multiple package definitions, and you want to find the source code location for a specific package. In traditional flakes, this often requires:
+
+- Reading complex `flake.nix` files
+- Understanding the project's organization
+- Each project has its own directory structure conventions
+
+This makes taking over new projects require extra time to understand their file organization.
+
+### Problem 3: Tedious Module Management
+
+In NixOS module development, the traditional approach is:
+
+```nix
+{
+  imports = [
+    ./modules/tailscale.nix
+    ./modules/ssh.nix
+    ./modules/firewall.nix
+  ];
+}
+```
+
+Problems with this approach:
+
+- Manual maintenance of import lists
+- Easy to miss modules
+- Module enable status is not intuitive
+
+### Problem 4: Inconsistent Dependency Injection
+
+When building different types of packages, you may need to:
+
+- Manually call `callPackage`
+- Handle different scopes (like `pkgs.python3Packages`)
+- Repeat the same dependency injection logic in multiple places
+
+### Problem 5: Lack of Unified Standards
+
+Different Nix projects often adopt different:
+
+- Directory structures
+- Naming conventions
+- Organization methods
+
+This leads to:
+
+- Team members need to learn new project conventions
+- Difficult to develop general-purpose automation tools
+- Increased code review and understanding costs
+
+## Flake FHS Solutions
+
+Flake FHS solves the above problems by automatically generating flake outputs through a standardized directory structure.
+
+### Solution 1: Zero Boilerplate Code
+
+In Flake FHS, `flake.nix` only needs:
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.flake-fhs.url = "github:luochen1990/flake-fhs";
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } { };
+}
+```
+
+When adding a package, just create `pkgs/hello.nix`:
+
+```nix
+{ writeShellScriptBin }:
+writeShellScriptBin "hello" ''
+  echo "Hello from Flake FHS!"
+''
+```
+
+**Flake FHS handles**:
+
+- Automatically traverses all supported systems
+- Automatically discovers all package definitions in `pkgs/` directory
+- Automatically calls `callPackage` for dependency injection
+- Generates corresponding `packages.<system>.<name>` outputs
+
+You don't need to modify `flake.nix`, just create or modify package definition files.
+
+### Solution 2: WYSIWYG Directory Mapping
+
+Flake FHS defines clear directory-to-flake outputs mapping:
+
+| Directory | Corresponding Output | Nix Command |
+|-----------|---------------------|-------------|
+| `pkgs/` | `packages.<system>.<name>` | `nix build .#<name>` |
+| `apps/` | `apps.<system>.<name>` | `nix run .#<name>` |
+| `hosts/` | `nixosConfigurations.<name>` | `nixos-rebuild switch --flake .#<name>` |
+| `modules/` | `nixosModules.<name>` | - |
+| `checks/` | `checks.<system>.<name>` | `nix flake check .#<name>` |
+| `shells/` | `devShells.<system>.<name>` | `nix develop .#<name>` |
+| `lib/` | `lib.<name>` | `nix eval .#lib.<name>` |
+| `templates/` | `templates.<name>` | `nix flake init --template .#<name>` |
+
+This design makes:
+
+- See the directory structure and know where the corresponding output is
+- Package definitions directly correspond to file locations (`pkgs/hello.nix`)
+- Any project's organization is predictable
+
+### Solution 3: Automatic Module Discovery
+
+In Flake FHS, you just need to put modules in the `modules/` directory.
+
+Create `modules/tweaks/options.nix`:
+
+```sh
+touch modules/tweaks/options.nix
+```
+
+Create `modules/tweaks/config.nix`:
+
+```nix
+{ config, lib, pkgs, ... }:
+{
+  config = {
+    systemd.services.my-service = {
+      description = "My Service";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.ExecStart = "${pkgs.hello}/bin/hello";
+    };
+  };
+}
+```
+
+This is equivalent to `modules/tweaks/options.nix`:
+
+```nix
+{ lib, ... }:
+{
+  options.tweaks.enable = lib.mkEnableOption "system tweaks";
+}
+```
+
+And `modules/tweaks/config.nix`:
+
+```nix
+{ config, lib, pkgs, ... }:
+{
+  config = lib.mkIf config.tweaks.enable {
+    systemd.services.my-service = {
+      description = "My Service";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.ExecStart = "${pkgs.hello}/bin/hello";
+    };
+  };
+}
+```
+
+Use directly in configuration:
+
+```nix
+{ ... }:
+{
+  tweaks.enable = true;  # Automatically imported and enabled
+}
+```
+
+**Flake FHS handles**:
+
+- Automatically discovers all modules in `modules/` directory
+- Automatically determines if modules need enable options
+- Automatically generates `enable` option (if not manually defined)
+- Automatically registers to `nixosModules` output
+
+You don't need to manually maintain import lists or worry about missing modules.
+
+### Solution 4: Scoped Package Tree
+
+For packages that need specific scopes (like Python packages), traditional approaches might require:
+
+```nix
+# ❌ Traditional way, need to manually handle scope
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+  outputs = { self, nixpkgs }:
+    let
+      systems = [ "x86_64-linux" ];
+      forAllSystems = nixpkgs.lib.genAttrs systems (system: {
+        pkgs = import nixpkgs { inherit system; };
+      });
+    in
+    {
+      packages = forAllSystems ({ pkgs }: {
+        my-python-package = pkgs.python3Packages.buildPythonPackage {
+          pname = "my-package";
+          version = "1.0";
+          src = ./.;
+          propagatedBuildInputs = [ pkgs.python3Packages.requests ];
+        };
+      });
+    };
+}
+```
+
+In Flake FHS, use Scoped Package Tree:
+
+```
+pkgs/
+  python/
+    scope.nix                    # Define scope
+      requests/
+        package.nix              # Inherit parent scope
+      numpy/
+        package.nix
+```
+
+Content of `pkgs/python/scope.nix`:
+
+```nix
+{ pkgs, ... }:
+{
+  scope = pkgs.python3Packages;
+}
+```
+
+Content of `pkgs/python/requests/package.nix`:
+
+```nix
+# ✅ requests automatically injected from scope
+{ requests, buildPythonPackage, ... }:
+buildPythonPackage {
+  pname = "my-requests-wrapper";
+  version = "1.0";
+  src = ./.;
+  propagatedBuildInputs = [ requests ];  # Use directly
+}
+```
+
+**Flake FHS handles**:
+
+- `scope.nix` can replace or inherit parent scope
+- Packages in subdirectories automatically use current scope
+- `callPackage` automatically uses current scope as arguments
+- Supports multi-level nesting and mixed usage
+
+This makes dependency injection logic centralized in one place (`scope.nix`) rather than scattered across multiple package definitions.
+
+### Solution 5: Unified Directory Standards
+
+Flake FHS provides a standardized directory structure for all projects.
+
+Initialize a new project:
+
+```bash
+nix flake init --template github:luochen1990/flake-fhs#short
+```
+
+This generates the following structure:
+
+```
+flake.nix              # Framework configuration
+pkgs/                  # Packages
+  hello.nix
+apps/                  # Applications
+  greeting/
+    package.nix
+hosts/                 # NixOS configurations
+  laptop/
+    configuration.nix
+modules/               # NixOS modules
+  tweaks/
+    options.nix
+    config.nix
+shells/                # Development environments
+  python.nix
+```
+
+**Benefits of unified standards**:
+
+- Any project uses the same directory structure
+- New members can quickly understand the project
+- Automation tools can be developed based on this structure
+- Reduces communication and understanding costs
+
+## Practical Examples
+
+### Example 1: Adding a Simple Tool Package
+
+**Traditional approach problems**:
+- Need to understand `forAllSystems` pattern
+- Need to modify `flake.nix`
+- Easy to make errors in system traversal logic
+
+**Flake FHS solution**:
+
+Create `pkgs/weather.nix`:
+
+```nix
+{ writeShellScriptBin, curl }:
+writeShellScriptBin "weather" ''
+  ${curl}/bin/curl wttr.in
+''
+```
+
+No need to modify `flake.nix`, build directly:
+
+```bash
+nix build .#weather
+```
+
+### Example 2: Adding a Module
+
+**Traditional approach problems**:
+- Need to manually add to `imports` list
+- Need to manually define enable options
+- Easy to have inconsistencies when modifying multiple places
+
+**Flake FHS solution**:
+
+Create `modules/myservice/options.nix`:
+
+```nix
+{ lib, ... }:
+{
+  options.myservice.enable = lib.mkEnableOption "my custom service";
+}
+```
+
+Create `modules/myservice/config.nix`:
+
+```nix
+{ config, lib, pkgs, ... }:
+{
+  config = lib.mkIf config.myservice.enable {
+    systemd.services.myservice = {
+      description = "My Custom Service";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        ExecStart = "${pkgs.hello}/bin/hello";
+      };
+    };
+  };
+}
+```
+
+Use directly in configuration:
+
+```nix
+{ ... }:
+{
+  myservice.enable = true;  # Automatically discovered and imported
+}
+```
+
+### Example 3: Building a Python Project
+
+**Traditional approach problems**:
+- Need to manually handle Python package set scope
+- Dependency injection logic scattered
+- Difficult to organize multi-package projects
+
+**Flake FHS solution**:
+
+```
+pkgs/
+  python/
+    scope.nix                    # Specify python3Packages as scope
+      my-app/
+        package.nix              # Can directly use requests, numpy, etc.
+      my-lib/
+        package.nix
+```
+
+`pkgs/python/scope.nix`:
+
+```nix
+{ pkgs, ... }:
+{
+  scope = pkgs.python3Packages;
+}
+```
+
+`pkgs/python/my-app/package.nix`:
+
+```nix
+# requests, numpy automatically available from scope
+{ requests, numpy, buildPythonPackage, ... }:
+buildPythonPackage {
+  pname = "my-app";
+  version = "1.0";
+  src = ./.;
+  propagatedBuildInputs = [ requests numpy ];
+}
+```
+
+## Other Practical Features
+
+### Colmena Integration
+
+**Problem**: Traditional approach requires separate hive structure configuration for Colmena, inconsistent with flake outputs.
+
+**Flake FHS solution**:
+
+```nix
+outputs = inputs@{ flake-fhs, ... }:
+  flake-fhs.lib.mkFlake { inherit inputs; } {
+    colmena.enable = true;  # One line to enable
+  };
+```
+
+The framework automatically:
+
+- Discovers all hosts from `hosts/`
+- Generates `colmenaHive` output
+- Injects `profileName` for each host
+
+Deploy:
+
+```bash
+nix run github:zhaofengli/colmena -- apply
+```
+
+### Unified Build Paradigm
+
+**Problem**: Different types of outputs (packages, apps, checks) may use different build methods.
+
+**Flake FHS solution**:
+
+All types use the same `package.nix` pattern:
+
+```nix
+# pkgs/hello.nix
+{ writeShellScriptBin }:
+writeShellScriptBin "hello" ''
+  echo "Hello!"
+''
+
+# apps/greeting/package.nix
+{ writeShellScriptBin }:
+writeShellScriptBin "greeting-app" ''
+  echo "Hello! Current time: $(date)"
+''
+
+# checks/smoke-test/package.nix
+{ runCommand, hello }:
+runCommand "smoke-test" { } ''
+  ${hello}/bin/hello > $out
+  grep "Hello!" $out
+''
+```
+
+The framework automatically:
+
+- Generates app structure for packages in `apps/`
+- Runs tests at build time for packages in `checks/`
+- Uses the same `callPackage` mechanism for dependency injection
+
+## Gradual Adoption
+
+**Problem**: Worried about high cost of large-scale project refactoring.
+
+**Flake FHS solution**:
+
+Supports hybrid mode, you can:
+
+1. **Full adoption**: All outputs generated by Flake FHS
+2. **Hybrid mode**: Some generated by framework, some manually defined
+3. **Gradual migration**: First migrate package definitions, then modules, finally configurations
+
+Example (hybrid mode):
+
+```nix
+outputs = inputs@{ flake-fhs, ... }:
+  flake-fhs.lib.mkFlake { inherit inputs; } {
+    # Automatically generated outputs
+  }
+  // {
+    # Manually defined additional outputs
+    someCustomOutput = { };
+  };
+```
+
+## Comparison Summary
+
+| Problem | Traditional Approach | Flake FHS |
+|---------|---------------------|-----------|
+| Boilerplate code | Repeatedly write `forAllSystems` etc. | Zero boilerplate |
+| Source location | Need to read `flake.nix` | Directory is mapping, clear at a glance |
+| Module management | Manually maintain import lists | Automatic discovery and registration |
+| Dependency injection | Scattered, easy to be inconsistent | Centralized in `scope.nix` |
+| Project standards | Each project has its own conventions | Unified directory standards |
+| Adding new packages | Modify `flake.nix` | Just create files |
+| Learning curve | Need deep understanding of Flake API | Just understand directory conventions |
+
+## How to Start
+
+### Initialize Project
+
+```bash
+nix flake init --template github:luochen1990/flake-fhs
+```
+
+### Add First Package
+
+Create `pkgs/my-tool.nix`:
+
+```nix
+{ writeShellScriptBin }:
+writeShellScriptBin "my-tool" ''
+  echo "My tool is working!"
+''
+```
+
+Build and run:
+
+```bash
+nix build .#my-tool
+./result/bin/my-tool
+```
+
+### Add First Module
+
+Create `modules/mymodule/options.nix`:
+
+```sh
+touch modules/mymodule/options.nix
+```
+
+Create `modules/mymodule/config.nix`:
+
+```nix
+{ config, ... }:
+{
+  config = {
+    # Enable flakes and nix-command
+    nix.settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+  };
+}
+```
+
+Enable in `hosts/laptop/configuration.nix`:
+
+```nix
+{ ... }:
+{
+  mymodule.enable = true;
+}
+```
+
+## More Information
+
+- Official documentation site: https://flake-fhs.lambda.lc
+- GitHub repository: https://github.com/luochen1990/flake-fhs
+- GitHub docs repository: https://github.com/luochen1990/flake-fhs-docs (when the documentation site is down, you can directly read the documentation files in the src/content/docs directory of this repository)

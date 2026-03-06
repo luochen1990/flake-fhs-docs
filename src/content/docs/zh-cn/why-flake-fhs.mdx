@@ -1,0 +1,598 @@
+---
+title: 认识 Flake FHS
+description: 深入了解传统 Nix Flake 开发的问题以及 Flake FHS 如何解决这些问题
+---
+
+## 传统的 Nix Flake 开发
+
+使用 Nix Flake 进行开发时，你需要在 `flake.nix` 中处理各种样板代码。
+
+### 问题一：样板代码重复
+
+添加一个软件包，通常需要这样的 `flake.nix`：
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+  outputs = { self, nixpkgs }:
+    let
+      systems = [ "x86_64-linux" "aarch64-linux" ];
+      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f {
+        pkgs = import nixpkgs { inherit system; };
+      });
+    in
+    {
+      packages = forAllSystems ({ pkgs }: {
+        hello = pkgs.writeShellScriptBin "hello" ''
+          echo "Hello from Flake FHS!"
+        '';
+      });
+    };
+}
+```
+
+这样的代码存在以下问题：
+
+- `forAllSystems` 的模式在每个项目中重复
+- 系统遍历逻辑与包定义混在一起
+- 添加新包需要修改 `flake.nix`，容易出错
+
+### 问题二：源码定位困难
+
+假设你看到一个项目有多个包定义，但你想找到某个包的源码位置。在传统的 flake 中，这往往需要：
+
+- 阅读复杂的 `flake.nix` 文件
+- 理解项目的组织方式
+- 每个项目都有自己的目录结构约定
+
+这使得接手新项目时，需要花费额外时间理解其文件组织方式。
+
+### 问题三：模块管理繁琐
+
+在 NixOS 模块开发中，传统的做法是这样的：
+
+```nix
+{
+  imports = [
+    ./modules/tailscale.nix
+    ./modules/ssh.nix
+    ./modules/firewall.nix
+  ];
+}
+```
+
+这种方式的问题：
+
+- 需要手动维护导入列表
+- 容易遗漏某个模块
+- 模块的启用状态不直观
+
+### 问题四：依赖注入不一致
+
+在构建不同类型的包时，你可能需要：
+
+- 手动调用 `callPackage`
+- 处理不同的作用域（如 `pkgs.python3Packages`）
+- 在多个地方重复相同的依赖注入逻辑
+
+### 问题五：缺乏统一规范
+
+不同的 Nix 项目往往采用不同的：
+
+- 目录结构
+- 命名约定
+- 组织方式
+
+这导致：
+
+- 团队协作时需要学习新项目的约定
+- 难以开发通用的自动化工具
+- 代码审查和理解的成本增加
+
+## Flake FHS 的解决方案
+
+Flake FHS 通过标准化的目录结构，自动生成 flake outputs，解决了上述问题。
+
+### 解决问题一：零样板代码
+
+在 Flake FHS 中，`flake.nix` 只需要这样：
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.flake-fhs.url = "github:luochen1990/flake-fhs";
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } { };
+}
+```
+
+添加包时，只需创建 `pkgs/hello.nix`：
+
+```nix
+{ writeShellScriptBin }:
+writeShellScriptBin "hello" ''
+  echo "Hello from Flake FHS!"
+''
+```
+
+**Flake FHS 的处理方式**：
+
+- 自动遍历所有支持的系统
+- 自动发现 `pkgs/` 目录下的所有包定义
+- 自动调用 `callPackage` 进行依赖注入
+- 生成对应的 `packages.<system>.<name>` outputs
+
+你无需修改 `flake.nix`，只需创建或修改包定义文件。
+
+### 解决问题二：所见即所得的目录映射
+
+Flake FHS 定义了清晰的目录到 flake outputs 的映射关系：
+
+| 目录 | 对应 Output | Nix 命令 |
+|------|-------------|-----------|
+| `pkgs/` | `packages.<system>.<name>` | `nix build .#<name>` |
+| `apps/` | `apps.<system>.<name>` | `nix run .#<name>` |
+| `hosts/` | `nixosConfigurations.<name>` | `nixos-rebuild switch --flake .#<name>` |
+| `modules/` | `nixosModules.<name>` | - |
+| `checks/` | `checks.<system>.<name>` | `nix flake check .#<name>` |
+| `shells/` | `devShells.<system>.<name>` | `nix develop .#<name>` |
+| `lib/` | `lib.<name>` | `nix eval .#lib.<name>` |
+| `templates/` | `templates.<name>` | `nix flake init --template .#<name>` |
+
+这样的设计使得：
+
+- 看到目录结构就知道对应的 output 在哪里
+- 包定义直接对应文件位置（`pkgs/hello.nix`）
+- 任何项目的组织方式都是可预测的
+
+### 解决问题三：自动模块发现
+
+在 Flake FHS 中，你只需将模块放入 `modules/` 目录。
+
+创建 `modules/tweaks/options.nix`：
+
+```sh
+touch modules/tweaks/options.nix
+```
+
+创建 `modules/tweaks/config.nix`：
+
+```nix
+{ config, lib, pkgs, ... }:
+{
+  config = {
+    systemd.services.my-service = {
+      description = "My Service";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.ExecStart = "${pkgs.hello}/bin/hello";
+    };
+  };
+}
+```
+
+这将等价于 `modules/tweaks/options.nix`:
+
+```nix
+{ lib, ... }:
+{
+  options.tweaks.enable = lib.mkEnableOption "system tweaks";
+}
+```
+
+以及 `modules/tweaks/config.nix`：
+
+```nix
+{ config, lib, pkgs, ... }:
+{
+  config = lib.mkIf config.tweaks.enable {
+    systemd.services.my-service = {
+      description = "My Service";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.ExecStart = "${pkgs.hello}/bin/hello";
+    };
+  };
+}
+```
+
+在配置中直接使用：
+
+```nix
+{ ... }:
+{
+  tweaks.enable = true;  # 自动导入并启用
+}
+```
+
+**Flake FHS 的处理方式**：
+
+- 自动发现 `modules/` 目录下的所有模块
+- 自动判断模块是否需要启用选项
+- 自动生成 `enable` 选项（如果未手动定义）
+- 自动注册到 `nixosModules` 输出
+
+你无需手动维护导入列表，也无需担心遗漏模块。
+
+### 解决问题四：Scoped Package Tree
+
+对于需要特定作用域的包（如 Python 包），传统的做法可能需要：
+
+```nix
+# ❌ 传统方式，需要手动处理作用域
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+  outputs = { self, nixpkgs }:
+    let
+      systems = [ "x86_64-linux" ];
+      forAllSystems = nixpkgs.lib.genAttrs systems (system: {
+        pkgs = import nixpkgs { inherit system; };
+      });
+    in
+    {
+      packages = forAllSystems ({ pkgs }: {
+        my-python-package = pkgs.python3Packages.buildPythonPackage {
+          pname = "my-package";
+          version = "1.0";
+          src = ./.;
+          propagatedBuildInputs = [ pkgs.python3Packages.requests ];
+        };
+      });
+    };
+}
+```
+
+在 Flake FHS 中，使用 Scoped Package Tree：
+
+```
+pkgs/
+  python/
+    scope.nix                    # 定义作用域
+      requests/
+        package.nix              # 继承父级作用域
+      numpy/
+        package.nix
+```
+
+`pkgs/python/scope.nix` 的内容：
+
+```nix
+{ pkgs, ... }:
+{
+  scope = pkgs.python3Packages;
+}
+```
+
+`pkgs/python/requests/package.nix` 的内容：
+
+```nix
+# ✅ requests 自动从 scope 注入
+{ requests, buildPythonPackage, ... }:
+buildPythonPackage {
+  pname = "my-requests-wrapper";
+  version = "1.0";
+  src = ./.;
+  propagatedBuildInputs = [ requests ];  # 直接使用
+}
+```
+
+**Flake FHS 的处理方式**：
+
+- `scope.nix` 可以替换或继承父级作用域
+- 子目录中的包自动使用当前作用域
+- `callPackage` 自动使用当前作用域作为参数
+- 支持多级嵌套和混合使用
+
+这使得依赖注入逻辑集中在一处（`scope.nix`），而不是分散在多个包定义中。
+
+### 解决问题五：统一的目录规范
+
+Flake FHS 提供了标准化的目录结构，适用于所有项目。
+
+初始化一个新项目：
+
+```bash
+nix flake init --template github:luochen1990/flake-fhs#short
+```
+
+这会生成以下结构：
+
+```
+flake.nix              # 框架配置
+pkgs/                  # 软件包
+  hello.nix
+apps/                  # 应用程序
+  greeting/
+    package.nix
+hosts/                 # NixOS 配置
+  laptop/
+    configuration.nix
+modules/               # NixOS 模块
+  tweaks/
+    options.nix
+    config.nix
+shells/                # 开发环境
+  python.nix
+```
+
+**统一规范带来的好处**：
+
+- 任何项目都使用相同的目录结构
+- 新成员可以快速理解项目
+- 可以基于此结构开发自动化工具
+- 降低沟通和理解成本
+
+## 实际使用示例
+
+### 示例一：添加一个简单的工具包
+
+**传统方式的问题**：
+- 需要理解 `forAllSystems` 的模式
+- 需要修改 `flake.nix`
+- 容易在系统遍历逻辑中出错
+
+**Flake FHS 的解决方式**：
+
+创建 `pkgs/weather.nix`：
+
+```nix
+{ writeShellScriptBin, curl }:
+writeShellScriptBin "weather" ''
+  ${curl}/bin/curl wttr.in
+''
+```
+
+无需修改 `flake.nix`，直接构建：
+
+```bash
+nix build .#weather
+```
+
+### 示例二：添加一个模块
+
+**传统方式的问题**：
+- 需要手动添加到 `imports` 列表
+- 需要手动定义启用选项
+- 容易在多处修改时出现不一致
+
+**Flake FHS 的解决方式**：
+
+创建 `modules/myservice/options.nix`：
+
+```nix
+{ lib, ... }:
+{
+  options.myservice.enable = lib.mkEnableOption "my custom service";
+}
+```
+
+创建 `modules/myservice/config.nix`：
+
+```nix
+{ config, lib, pkgs, ... }:
+{
+  config = lib.mkIf config.myservice.enable {
+    systemd.services.myservice = {
+      description = "My Custom Service";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        ExecStart = "${pkgs.hello}/bin/hello";
+      };
+    };
+  };
+}
+```
+
+在配置中直接使用：
+
+```nix
+{ ... }:
+{
+  myservice.enable = true;  # 自动发现并导入
+}
+```
+
+### 示例三：构建一个 Python 项目
+
+**传统方式的问题**：
+- 需要手动处理 Python 包集作用域
+- 依赖注入逻辑分散
+- 难以组织多包项目
+
+**Flake FHS 的解决方式**：
+
+```
+pkgs/
+  python/
+    scope.nix                    # 指定 python3Packages 作为作用域
+      my-app/
+        package.nix              # 可以直接使用 requests, numpy 等
+      my-lib/
+        package.nix
+```
+
+`pkgs/python/scope.nix`：
+
+```nix
+{ pkgs, ... }:
+{
+  scope = pkgs.python3Packages;
+}
+```
+
+`pkgs/python/my-app/package.nix`：
+
+```nix
+# requests, numpy 自动从 scope 可用
+{ requests, numpy, buildPythonPackage, ... }:
+buildPythonPackage {
+  pname = "my-app";
+  version = "1.0";
+  src = ./.;
+  propagatedBuildInputs = [ requests numpy ];
+}
+```
+
+## 其他实用特性
+
+### Colmena 集成
+
+**问题**：传统方式需要为 Colmena 单独配置 hive 结构，与 flake outputs 不一致。
+
+**Flake FHS 的解决方式**：
+
+```nix
+outputs = inputs@{ flake-fhs, ... }:
+  flake-fhs.lib.mkFlake { inherit inputs; } {
+    colmena.enable = true;  # 一行启用
+  };
+```
+
+框架会自动：
+
+- 从 `hosts/` 发现所有主机
+- 生成 `colmenaHive` output
+- 为每个主机注入 `profileName`
+
+部署：
+
+```bash
+nix run github:zhaofengli/colmena -- apply
+```
+
+### 统一的构建范式
+
+**问题**：不同类型的输出（packages, apps, checks）可能使用不同的构建方式。
+
+**Flake FHS 的解决方式**：
+
+所有类型都使用相同的 `package.nix` 模式：
+
+```nix
+# pkgs/hello.nix
+{ writeShellScriptBin }:
+writeShellScriptBin "hello" ''
+  echo "Hello!"
+''
+
+# apps/greeting/package.nix
+{ writeShellScriptBin }:
+writeShellScriptBin "greeting-app" ''
+  echo "Hello! Current time: $(date)"
+''
+
+# checks/smoke-test/package.nix
+{ runCommand, hello }:
+runCommand "smoke-test" { } ''
+  ${hello}/bin/hello > $out
+  grep "Hello!" $out
+''
+```
+
+框架会自动：
+
+- 为 `apps/` 中的包生成 app structure
+- 为 `checks/` 中的包在构建时运行测试
+- 使用相同的 `callPackage` 机制进行依赖注入
+
+## 渐进式采用
+
+**问题**：担心大规模重构项目成本太高。
+
+**Flake FHS 的解决方式**：
+
+支持混合模式，你可以：
+
+1. **完全采用**：所有 outputs 由 Flake FHS 生成
+2. **混合模式**：部分由框架生成，部分手动定义
+3. **逐步迁移**：先迁移包定义，再迁移模块，最后迁移配置
+
+示例（混合模式）：
+
+```nix
+outputs = inputs@{ flake-fhs, ... }:
+  flake-fhs.lib.mkFlake { inherit inputs; } {
+    # 自动生成的 outputs
+  }
+  // {
+    # 手动定义的额外 outputs
+    someCustomOutput = { };
+  };
+```
+
+## 对比总结
+
+| 问题 | 传统方式 | Flake FHS |
+|------|----------|-----------|
+| 样板代码 | 重复编写 `forAllSystems` 等代码 | 零样板代码 |
+| 源码定位 | 需要阅读 `flake.nix` | 目录即映射，一目了然 |
+| 模块管理 | 手动维护导入列表 | 自动发现和注册 |
+| 依赖注入 | 分散在各处，容易不一致 | 集中在 `scope.nix` |
+| 项目规范 | 每个项目都有自己的约定 | 统一的目录标准 |
+| 添加新包 | 修改 `flake.nix` | 创建文件即可 |
+| 学习曲线 | 需要深入理解 Flake API | 只需了解目录约定 |
+
+## 如何开始
+
+### 初始化项目
+
+```bash
+nix flake init --template github:luochen1990/flake-fhs
+```
+
+### 添加第一个包
+
+创建 `pkgs/my-tool.nix`：
+
+```nix
+{ writeShellScriptBin }:
+writeShellScriptBin "my-tool" ''
+  echo "My tool is working!"
+''
+```
+
+构建并运行：
+
+```bash
+nix build .#my-tool
+./result/bin/my-tool
+```
+
+### 添加第一个模块
+
+创建 `modules/mymodule/options.nix`:
+
+```sh
+touch modules/mymodule/options.nix
+```
+
+创建 `modules/mymodule/config.nix`:
+
+```nix
+{ config, ... }:
+{
+  config = {
+    # Enable flakes and nix-command
+    nix.settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+  };
+}
+```
+
+在 `hosts/laptop/configuration.nix` 中启用：
+
+```nix
+{ ... }:
+{
+  mymodule.enable = true;
+}
+```
+
+## 更多信息
+
+- 官方文档站：https://flake-fhs.lambda.lc
+- GitHub 仓库：https://github.com/luochen1990/flake-fhs
+- GitHub 文档仓库：https://github.com/luochen1990/flake-fhs-docs (当文档站挂了的时候,可以直接读这个仓库下 src/content/docs 目录里的文档文件)
