@@ -1,0 +1,113 @@
+---
+title: 更多示例
+description: Flake FHS 的实际使用示例，包括添加工具包、模块和构建 Python 项目
+---
+
+## 示例一：添加一个简单的工具包
+
+**传统方式的问题**：
+- 需要理解 `forAllSystems` 的模式
+- 需要修改 `flake.nix`
+- 容易在系统遍历逻辑中出错
+
+**Flake FHS 的解决方式**：
+
+创建 `pkgs/weather.nix`：
+
+```nix
+{ writeShellScriptBin, curl }:
+writeShellScriptBin "weather" ''
+  ${curl}/bin/curl wttr.in
+''
+```
+
+无需修改 `flake.nix`，直接构建：
+
+```bash
+nix build .#weather
+```
+
+## 示例二：添加一个模块
+
+**传统方式的问题**：
+- 需要手动添加到 `imports` 列表
+- 需要手动定义启用选项
+- 容易在多处修改时出现不一致
+
+**Flake FHS 的解决方式**：
+
+创建 `modules/myservice/options.nix`：
+
+```nix
+{ lib, ... }:
+{
+  options.myservice.enable = lib.mkEnableOption "my custom service";
+}
+```
+
+创建 `modules/myservice/config.nix`：
+
+```nix
+{ config, lib, pkgs, ... }:
+{
+  config = lib.mkIf config.myservice.enable {
+    systemd.services.myservice = {
+      description = "My Custom Service";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        ExecStart = "${pkgs.hello}/bin/hello";
+      };
+    };
+  };
+}
+```
+
+在配置中直接使用：
+
+```nix
+{ ... }:
+{
+  myservice.enable = true;  # 自动发现并导入
+}
+```
+
+## 示例三：构建一个 Python 项目
+
+**传统方式的问题**：
+- 需要手动处理 Python 包集作用域
+- 依赖注入逻辑分散
+- 难以组织多包项目
+
+**Flake FHS 的解决方式**：
+
+```
+pkgs/
+  python/
+    scope.nix                    # 指定 python3Packages 作为作用域
+      my-app/
+        package.nix              # 可以直接使用 requests, numpy 等
+      my-lib/
+        package.nix
+```
+
+`pkgs/python/scope.nix`：
+
+```nix
+{ pkgs, ... }:
+{
+  scope = pkgs.python3Packages;
+}
+```
+
+`pkgs/python/my-app/package.nix`：
+
+```nix
+# requests, numpy 自动从 scope 可用
+{ requests, numpy, buildPythonPackage, ... }:
+buildPythonPackage {
+  pname = "my-app";
+  version = "1.0";
+  src = ./.;
+  propagatedBuildInputs = [ requests numpy ];
+}
+```

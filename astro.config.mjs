@@ -35,6 +35,7 @@ export default defineConfig({
 					items: [
 						{ slug: 'why-flake-fhs' },
 						{ slug: 'manual' },
+						{ slug: 'more-examples' },
 						{ slug: 'directory-map' },
 					],
 				},

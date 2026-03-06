@@ -1,0 +1,113 @@
+---
+title: More Examples
+description: Practical usage examples of Flake FHS, including adding tool packages, modules, and building Python projects
+---
+
+## Example 1: Adding a Simple Tool Package
+
+**Traditional approach problems**:
+- Need to understand `forAllSystems` pattern
+- Need to modify `flake.nix`
+- Easy to make errors in system traversal logic
+
+**Flake FHS solution**:
+
+Create `pkgs/weather.nix`:
+
+```nix
+{ writeShellScriptBin, curl }:
+writeShellScriptBin "weather" ''
+  ${curl}/bin/curl wttr.in
+''
+```
+
+No need to modify `flake.nix`, build directly:
+
+```bash
+nix build .#weather
+```
+
+## Example 2: Adding a Module
+
+**Traditional approach problems**:
+- Need to manually add to `imports` list
+- Need to manually define enable options
+- Easy to have inconsistencies when modifying multiple places
+
+**Flake FHS solution**:
+
+Create `modules/myservice/options.nix`:
+
+```nix
+{ lib, ... }:
+{
+  options.myservice.enable = lib.mkEnableOption "my custom service";
+}
+```
+
+Create `modules/myservice/config.nix`:
+
+```nix
+{ config, lib, pkgs, ... }:
+{
+  config = lib.mkIf config.myservice.enable {
+    systemd.services.myservice = {
+      description = "My Custom Service";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        ExecStart = "${pkgs.hello}/bin/hello";
+      };
+    };
+  };
+}
+```
+
+Use directly in configuration:
+
+```nix
+{ ... }:
+{
+  myservice.enable = true;  # Automatically discovered and imported
+}
+```
+
+## Example 3: Building a Python Project
+
+**Traditional approach problems**:
+- Need to manually handle Python package set scope
+- Dependency injection logic scattered
+- Difficult to organize multi-package projects
+
+**Flake FHS solution**:
+
+```
+pkgs/
+  python/
+    scope.nix                    # Specify python3Packages as scope
+      my-app/
+        package.nix              # Can directly use requests, numpy, etc.
+      my-lib/
+        package.nix
+```
+
+`pkgs/python/scope.nix`:
+
+```nix
+{ pkgs, ... }:
+{
+  scope = pkgs.python3Packages;
+}
+```
+
+`pkgs/python/my-app/package.nix`:
+
+```nix
+# requests, numpy automatically available from scope
+{ requests, numpy, buildPythonPackage, ... }:
+buildPythonPackage {
+  pname = "my-app";
+  version = "1.0";
+  src = ./.;
+  propagatedBuildInputs = [ requests numpy ];
+}
+```
