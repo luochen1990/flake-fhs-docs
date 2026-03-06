@@ -11,46 +11,27 @@ import { LinkCard, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/com
 
 1.  **初始化项目**
 
-    Flake FHS 提供了多种初始化模板，以适应不同的项目需求：
+    Flake FHS 提供两种初始化模板：
 
     <Tabs>
-      <TabItem label="全新 Nix 项目" icon="rocket">
+      <TabItem label="纯 Nix 项目" icon="rocket">
         适用于作为 **nixos-config** 或**纯 Nix 软件包仓库**。
 
-        <Tabs>
-          <TabItem label="推荐 (短名)" icon="star">
-            **特点**：目录名简洁 (`pkgs`, `hosts`)，符合社区习惯。
+        ```bash
+        nix flake init --template github:luochen1990/flake-fhs
+        ```
 
-            ```bash
-            nix flake init --template github:luochen1990/flake-fhs#short
-            ```
-          </TabItem>
-          <TabItem label="标准 (长名)" icon="document">
-            **特点**：目录名完整 (`packages`, `nixosConfigurations`)，严格对应 Nix 术语。
-
-            ```bash
-            nix flake init --template github:luochen1990/flake-fhs#std
-            ```
-          </TabItem>
-          <TabItem label="最小化" icon="minimize">
-            **特点**：仅包含 `flake.nix`，由你自己创建目录结构。
-
-            ```bash
-            nix flake init --template github:luochen1990/flake-fhs#zero
-            ```
-          </TabItem>
-        </Tabs>
+        它会生成 `flake.nix` 文件，你可以继续添加 `pkgs/`, `hosts/`, `modules/` 等标准目录结构。
       </TabItem>
 
-      <TabItem label="现有项目集成" icon="puzzle">
+      <TabItem label="嵌入到非 Nix 项目" icon="puzzle">
         适用于为**非纯 Nix 项目** (如 Python, Node.js, Rust) 添加 Nix 支持。
 
-        它会为你生成最小化的 `flake.nix` 和必要的辅助文件，而不干扰现有的项目结构。
-
         ```bash
-        # 将 Nix 支持集成到当前项目
-        nix flake init --template github:luochen1990/flake-fhs#project
+        nix flake init --template github:luochen1990/flake-fhs#embed
         ```
+
+        它会生成 `flake.nix` 文件和 `nix/` 目录，尽可能不干扰现有的项目结构。你可以继续在 `nix/` 目录下添加 `pkgs/`, `hosts/`, `modules/` 等标准目录结构。
       </TabItem>
     </Tabs>
 
