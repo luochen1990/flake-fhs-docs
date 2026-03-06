@@ -57,6 +57,18 @@ export default defineConfig({
 					],
 				},
 				{
+					label: '更多特性',
+					translations: {
+						en: 'More Features',
+					},
+					items: [
+						{ slug: 'features-colmena' },
+						{ slug: 'features-unified-build' },
+						{ slug: 'features-gradual-adoption' },
+						{ slug: 'features-treefmt' },
+					],
+				},
+				{
 					label: '配置参考',
 					translations: {
 						en: 'Configuration Reference',

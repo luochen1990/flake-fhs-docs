@@ -1,0 +1,76 @@
+---
+title: Colmena 集成
+description: 使用 Flake FHS 无缝集成 Colmena 进行 NixOS 主机部署
+---
+
+## 问题背景
+
+在传统方式中，为 Colmena 配置部署需要单独维护 hive 结构，这与标准的 flake outputs 结构往往不一致，导致配置重复和维护困难。
+
+## Flake FHS 的解决方案
+
+在 Flake FHS 中启用 Colmena 集成只需一行配置：
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.flake-fhs.url = "github:luochen1990/flake-fhs";
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } {
+      colmena.enable = true;  # 一行启用
+    };
+}
+```
+
+## 自动化处理
+
+启用后，框架会自动处理以下内容：
+
+1. **主机发现**：从 `hosts/` 目录自动发现所有 NixOS 配置
+2. **生成 colmenaHive**：自动生成符合 Colmena 要求的 hive 结构
+3. **注入 profileName**：为每个主机自动注入 `profileName` 参数，便于在配置中引用
+
+## 部署操作
+
+使用标准的 Colmena 命令即可部署：
+
+```bash
+# 部署所有主机
+nix run github:zhaofengli/colmena -- apply
+
+# 部署特定主机
+nix run github:zhaofengli/colmena -- apply --on laptop
+
+# 查看部署状态
+nix run github:zhaofengli/colmena -- exec -- echo "Hello from $(hostname)"
+```
+
+## 主机配置示例
+
+在 `hosts/laptop/configuration.nix` 中：
+
+```nix
+{ config, lib, pkgs, profileName, ... }:
+{
+  # profileName 由框架自动注入，值为 "laptop"
+  networking.hostName = profileName;
+  
+  # 其他配置
+  services.openssh.enable = true;
+}
+```
+
+## 优势总结
+
+| 特性 | 传统方式 | Flake FHS |
+|------|----------|-----------|
+| 配置维护 | 需要单独维护 hive 结构 | 复用 hosts/ 目录配置 |
+| 主机发现 | 手动列出所有主机 | 自动发现 |
+| profileName | 手动配置 | 自动注入 |
+| 一致性 | hive 与 hosts 配置可能不一致 | 单一数据源 |
+
+## 相关资源
+
+- [Colmena 官方文档](https://colmena.cli.rs/)
+- [主机配置指南](../manual-hosts/)

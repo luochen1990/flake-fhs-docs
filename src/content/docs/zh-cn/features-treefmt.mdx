@@ -1,0 +1,249 @@
+---
+title: treefmt 集成
+description: 使用 Flake FHS 自动集成 treefmt 进行代码格式化
+---
+
+## 问题背景
+
+在 Nix 项目中维护代码格式化配置通常需要：
+
+- 手动配置 `formatter` output
+- 在开发环境中集成格式化工具
+- 确保团队成员使用相同的格式化配置
+
+这些工作往往重复且容易出错。
+
+## Flake FHS 的解决方案
+
+Flake FHS 自动检测并配置 `formatter` output，支持多种配置方式：
+
+### 方式一：使用 treefmt.nix（推荐）
+
+当项目中存在 `treefmt.nix` 并添加了 `treefmt-nix` input 时，框架会自动使用 treefmt-nix：
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-fhs.url = "github:luochen1990/flake-fhs";
+    treefmt-nix.url = "github:numtide/treefmt-nix";  # 添加 treefmt-nix
+  };
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } { };
+}
+```
+
+创建 `treefmt.nix` 配置文件：
+
+```nix
+# treefmt.nix
+{ pkgs, ... }:
+{
+  # Nix 文件格式化
+  programs.nixfmt.enable = true;
+  
+  # Shell 脚本格式化
+  programs.shellcheck.enable = true;
+  programs.shfmt.enable = true;
+  
+  # Python 格式化
+  programs.ruff-format.enable = true;
+  
+  # 设置项目根目录
+  projectRootFile = "flake.nix";
+}
+```
+
+### 方式二：使用 treefmt.toml
+
+如果项目根目录存在 `treefmt.toml` 文件：
+
+```toml
+# treefmt.toml
+[formatter.nix]
+command = "nixfmt"
+includes = ["*.nix"]
+
+[formatter.shell]
+command = "shfmt"
+options = ["-i", "2"]
+includes = ["*.sh"]
+```
+
+框架会自动使用 `pkgs.treefmt` 作为 formatter。
+
+### 方式三：默认格式化
+
+如果没有找到任何配置文件，框架会使用 `nixfmt-tree` 作为默认格式化工具：
+
+```bash
+nix fmt
+# 自动使用 nixfmt-tree 格式化所有 .nix 文件
+```
+
+## 使用方式
+
+### 命令行格式化
+
+```bash
+# 格式化整个项目
+nix fmt
+
+# 检查格式（CI 中使用）
+nix fmt -- --check
+```
+
+### 开发环境集成
+
+Flake FHS 自动将 formatter 集成到开发环境中：
+
+```bash
+nix develop
+# formatter 工具自动可用
+```
+
+## treefmt.nix 配置示例
+
+### 多语言项目
+
+```nix
+{ pkgs, ... }:
+{
+  # Nix 格式化
+  programs.nixfmt.enable = true;
+  
+  # Python 格式化
+  programs.ruff-format.enable = true;
+  programs.ruff-check.enable = true;
+  
+  # JavaScript/TypeScript 格式化
+  programs.prettier = {
+    enable = true;
+    includes = [
+      "*.js"
+      "*.jsx"
+      "*.ts"
+      "*.tsx"
+      "*.json"
+      "*.md"
+    ];
+  };
+  
+  # Shell 脚本
+  programs.shellcheck.enable = true;
+  programs.shfmt.enable = true;
+  
+  # 设置项目根目录标识
+  projectRootFile = "flake.nix";
+}
+```
+
+### 仅格式化特定文件
+
+```nix
+{ pkgs, ... }:
+{
+  programs.nixfmt = {
+    enable = true;
+    # 仅包含 pkgs/ 和 modules/ 目录下的 nix 文件
+    includes = [
+      "pkgs/**/*.nix"
+      "modules/**/*.nix"
+    ];
+  };
+  
+  projectRootFile = "flake.nix";
+}
+```
+
+## 自动检测优先级
+
+框架按以下优先级检测 formatter 配置：
+
+1. **treefmt-nix** (`treefmt.nix` + `treefmt-nix` input) - **最高优先级**
+2. **treefmt** (`treefmt.toml`)
+3. **nixfmt-tree** - 默认回退
+
+## 完整示例
+
+### 项目结构
+
+```
+my-project/
+├── flake.nix
+├── treefmt.nix          # 格式化配置
+├── pkgs/
+│   └── hello.nix
+├── modules/
+│   └── mymodule.nix
+└── scripts/
+    └── deploy.sh
+```
+
+### flake.nix
+
+```nix
+{
+  description = "My formatted project";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-fhs.url = "github:luochen1990/flake-fhs";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+  };
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } {
+      # 其他配置...
+    };
+}
+```
+
+### treefmt.nix
+
+```nix
+{ pkgs, ... }:
+{
+  programs.nixfmt.enable = true;
+  programs.shfmt.enable = true;
+  projectRootFile = "flake.nix";
+}
+```
+
+## CI 集成
+
+在 CI 中检查代码格式：
+
+```yaml
+# .github/workflows/check.yml
+name: Check
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Check formatting
+        run: nix fmt -- --check
+```
+
+## 优势总结
+
+| 特性 | 手动配置 | Flake FHS 自动集成 |
+|------|----------|-------------------|
+| 配置复杂度 | 需要手动配置 formatter output | 自动检测和配置 |
+| 工具集成 | 需要在 devShell 中添加 | 自动集成到开发环境 |
+| 团队一致性 | 依赖手动同步配置 | 配置文件即规范 |
+| 灵活性 | 任意配置 | 支持 treefmt.nix 和 treefmt.toml |
+
+## 相关资源
+
+- [treefmt 官方文档](https://treefmt.com/)
+- [treefmt-nix 仓库](https://github.com/numtide/treefmt-nix)
+- [开发环境配置](../manual-shells/)

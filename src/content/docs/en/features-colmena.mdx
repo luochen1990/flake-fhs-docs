@@ -1,0 +1,76 @@
+---
+title: Colmena Integration
+description: Seamlessly integrate Colmena for NixOS host deployment with Flake FHS
+---
+
+## Problem Background
+
+In traditional setups, configuring Colmena deployment requires maintaining a separate hive structure, which is often inconsistent with standard flake outputs structure, leading to duplicate configuration and maintenance difficulties.
+
+## Flake FHS Solution
+
+Enabling Colmena integration in Flake FHS requires just one line:
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.flake-fhs.url = "github:luochen1990/flake-fhs";
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } {
+      colmena.enable = true;  # Enable with one line
+    };
+}
+```
+
+## Automatic Processing
+
+Once enabled, the framework automatically handles:
+
+1. **Host Discovery**: Automatically discovers all NixOS configurations from `hosts/` directory
+2. **colmenaHive Generation**: Automatically generates hive structure conforming to Colmena requirements
+3. **profileName Injection**: Automatically injects `profileName` parameter for each host for easy reference in configurations
+
+## Deployment Operations
+
+Deploy using standard Colmena commands:
+
+```bash
+# Deploy all hosts
+nix run github:zhaofengli/colmena -- apply
+
+# Deploy specific host
+nix run github:zhaofengli/colmena -- apply --on laptop
+
+# Check deployment status
+nix run github:zhaofengli/colmena -- exec -- echo "Hello from $(hostname)"
+```
+
+## Host Configuration Example
+
+In `hosts/laptop/configuration.nix`:
+
+```nix
+{ config, lib, pkgs, profileName, ... }:
+{
+  # profileName is automatically injected by framework, value is "laptop"
+  networking.hostName = profileName;
+  
+  # Other configurations
+  services.openssh.enable = true;
+}
+```
+
+## Advantages Summary
+
+| Feature | Traditional Approach | Flake FHS |
+|---------|---------------------|-----------|
+| Configuration Maintenance | Need to maintain hive structure separately | Reuse hosts/ directory configuration |
+| Host Discovery | Manually list all hosts | Automatic discovery |
+| profileName | Manual configuration | Automatic injection |
+| Consistency | hive and hosts config may be inconsistent | Single source of truth |
+
+## Related Resources
+
+- [Colmena Official Documentation](https://colmena.cli.rs/)
+- [Host Configuration Guide](../manual-hosts/)

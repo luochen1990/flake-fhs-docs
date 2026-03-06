@@ -1,0 +1,249 @@
+---
+title: treefmt Integration
+description: Automatically integrate treefmt for code formatting with Flake FHS
+---
+
+## Problem Background
+
+Maintaining code formatting configuration in Nix projects typically requires:
+
+- Manually configuring the `formatter` output
+- Integrating formatting tools in development environments
+- Ensuring team members use the same formatting configuration
+
+These tasks are often repetitive and error-prone.
+
+## Flake FHS Solution
+
+Flake FHS automatically detects and configures the `formatter` output, supporting multiple configuration methods:
+
+### Method 1: Using treefmt.nix (Recommended)
+
+When a `treefmt.nix` file exists in the project and `treefmt-nix` input is added, the framework automatically uses treefmt-nix:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-fhs.url = "github:luochen1990/flake-fhs";
+    treefmt-nix.url = "github:numtide/treefmt-nix";  # Add treefmt-nix
+  };
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } { };
+}
+```
+
+Create a `treefmt.nix` configuration file:
+
+```nix
+# treefmt.nix
+{ pkgs, ... }:
+{
+  # Nix file formatting
+  programs.nixfmt.enable = true;
+  
+  # Shell script formatting
+  programs.shellcheck.enable = true;
+  programs.shfmt.enable = true;
+  
+  # Python formatting
+  programs.ruff-format.enable = true;
+  
+  # Set project root directory
+  projectRootFile = "flake.nix";
+}
+```
+
+### Method 2: Using treefmt.toml
+
+If a `treefmt.toml` file exists in the project root:
+
+```toml
+# treefmt.toml
+[formatter.nix]
+command = "nixfmt"
+includes = ["*.nix"]
+
+[formatter.shell]
+command = "shfmt"
+options = ["-i", "2"]
+includes = ["*.sh"]
+```
+
+The framework automatically uses `pkgs.treefmt` as the formatter.
+
+### Method 3: Default Formatting
+
+If no configuration files are found, the framework uses `nixfmt-tree` as the default formatting tool:
+
+```bash
+nix fmt
+# Automatically uses nixfmt-tree to format all .nix files
+```
+
+## Usage
+
+### Command Line Formatting
+
+```bash
+# Format entire project
+nix fmt
+
+# Check formatting (for CI)
+nix fmt -- --check
+```
+
+### Development Environment Integration
+
+Flake FHS automatically integrates the formatter into development environments:
+
+```bash
+nix develop
+# formatter tool automatically available
+```
+
+## treefmt.nix Configuration Examples
+
+### Multi-language Project
+
+```nix
+{ pkgs, ... }:
+{
+  # Nix formatting
+  programs.nixfmt.enable = true;
+  
+  # Python formatting
+  programs.ruff-format.enable = true;
+  programs.ruff-check.enable = true;
+  
+  # JavaScript/TypeScript formatting
+  programs.prettier = {
+    enable = true;
+    includes = [
+      "*.js"
+      "*.jsx"
+      "*.ts"
+      "*.tsx"
+      "*.json"
+      "*.md"
+    ];
+  };
+  
+  # Shell scripts
+  programs.shellcheck.enable = true;
+  programs.shfmt.enable = true;
+  
+  # Set project root identifier
+  projectRootFile = "flake.nix";
+}
+```
+
+### Format Specific Files Only
+
+```nix
+{ pkgs, ... }:
+{
+  programs.nixfmt = {
+    enable = true;
+    # Only include nix files in pkgs/ and modules/ directories
+    includes = [
+      "pkgs/**/*.nix"
+      "modules/**/*.nix"
+    ];
+  };
+  
+  projectRootFile = "flake.nix";
+}
+```
+
+## Auto-detection Priority
+
+The framework detects formatter configuration in the following priority order:
+
+1. **treefmt-nix** (`treefmt.nix` + `treefmt-nix` input) - **Highest priority**
+2. **treefmt** (`treefmt.toml`)
+3. **nixfmt-tree** - Default fallback
+
+## Complete Example
+
+### Project Structure
+
+```
+my-project/
+├── flake.nix
+├── treefmt.nix          # Formatting configuration
+├── pkgs/
+│   └── hello.nix
+├── modules/
+│   └── mymodule.nix
+└── scripts/
+    └── deploy.sh
+```
+
+### flake.nix
+
+```nix
+{
+  description = "My formatted project";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-fhs.url = "github:luochen1990/flake-fhs";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+  };
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } {
+      # Other configurations...
+    };
+}
+```
+
+### treefmt.nix
+
+```nix
+{ pkgs, ... }:
+{
+  programs.nixfmt.enable = true;
+  programs.shfmt.enable = true;
+  projectRootFile = "flake.nix";
+}
+```
+
+## CI Integration
+
+Check code formatting in CI:
+
+```yaml
+# .github/workflows/check.yml
+name: Check
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Check formatting
+        run: nix fmt -- --check
+```
+
+## Advantages Summary
+
+| Feature | Manual Configuration | Flake FHS Auto Integration |
+|---------|---------------------|---------------------------|
+| Configuration Complexity | Need to manually configure formatter output | Automatic detection and configuration |
+| Tool Integration | Need to add to devShell | Automatically integrated into development environment |
+| Team Consistency | Rely on manual configuration sync | Configuration file is the standard |
+| Flexibility | Arbitrary configuration | Supports treefmt.nix and treefmt.toml |
+
+## Related Resources
+
+- [treefmt Official Documentation](https://treefmt.com/)
+- [treefmt-nix Repository](https://github.com/numtide/treefmt-nix)
+- [Development Environment Configuration](../manual-shells/)

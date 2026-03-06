@@ -1,0 +1,181 @@
+---
+title: 统一 packages, apps, checks 的编写
+description: 了解 Flake FHS 如何使用统一的构建范式简化不同类型输出的定义
+---
+
+## 问题背景
+
+在传统 Flake 开发中，不同类型的输出（`packages`、`apps`、`checks`）往往使用不同的定义方式：
+
+- `packages` 通常使用 `callPackage` 模式
+- `apps` 需要手动构造 `{ type = "app"; program = "..."; }` 结构
+- `checks` 的处理方式又各不相同
+
+这种不一致增加了学习成本和维护难度。
+
+## Flake FHS 的解决方案
+
+Flake FHS 提供了统一的 `package.nix` 模式，所有类型的输出都使用相同的定义方式。
+
+### 统一的文件结构
+
+```
+pkgs/
+  hello.nix            # package 输出
+apps/
+  greeting/
+    package.nix        # app 输出
+checks/
+  smoke-test/
+    package.nix        # check 输出
+```
+
+### 统一的代码风格
+
+所有类型都使用相同的函数签名模式：
+
+```nix
+# pkgs/hello.nix - 普通软件包
+{ writeShellScriptBin }:
+writeShellScriptBin "hello" ''
+  echo "Hello!"
+''
+```
+
+```nix
+# apps/greeting/package.nix - 应用程序
+{ writeShellScriptBin }:
+writeShellScriptBin "greeting-app" ''
+  echo "Hello! Current time: $(date)"
+''
+```
+
+```nix
+# checks/smoke-test/package.nix - 测试检查
+{ runCommand, hello }:
+runCommand "smoke-test" { } ''
+  ${hello}/bin/hello > $out
+  grep "Hello!" $out
+''
+```
+
+## 自动转换机制
+
+框架会根据目录位置自动转换输出类型：
+
+### packages 输出
+
+直接使用 derivation 作为输出：
+
+```bash
+nix build .#hello
+```
+
+### apps 输出
+
+自动生成 app structure：
+
+```nix
+# 框架自动生成
+{
+  type = "app";
+  program = "${derivation}/bin/greeting-app";
+}
+```
+
+```bash
+nix run .#greeting
+```
+
+### checks 输出
+
+构建时自动运行测试：
+
+```bash
+nix flake check
+```
+
+## 依赖注入的一致性
+
+所有类型都使用相同的 `callPackage` 机制：
+
+```nix
+# 所有文件都可以通过参数获取依赖
+{ writeShellScriptBin, hello, fetchFromGitHub, ... }:
+# 你的构建逻辑
+```
+
+框架自动处理：
+- 参数名称匹配
+- 作用域继承（scope.nix）
+- 依赖传递
+
+## 使用场景对比
+
+| 输出类型 | 用途 | 构建命令 | 运行方式 |
+|---------|------|----------|----------|
+| packages | 构建产物 | `nix build` | 构建后使用 |
+| apps | 可执行程序 | `nix build` | `nix run` 直接运行 |
+| checks | 测试验证 | 构建时执行 | `nix flake check` |
+
+## 实际示例
+
+### 定义一个带依赖的应用
+
+```nix
+# apps/deploy/package.nix
+{ writeShellScriptBin, openssh, rsync }:
+writeShellScriptBin "deploy" ''
+  set -euo pipefail
+  
+  HOST=''${1:-}
+  if [ -z "$HOST" ]; then
+    echo "Usage: deploy <host>"
+    exit 1
+  fi
+  
+  export PATH="${openssh}/bin:${rsync}/bin:$PATH"
+  rsync -avz ./result/ "$HOST":/var/www/
+''
+```
+
+运行：
+
+```bash
+nix run .#deploy -- myserver.example.com
+```
+
+### 定义一个集成测试
+
+```nix
+# checks/integration-test/package.nix
+{ runCommand, hello, coreutils }:
+runCommand "integration-test" {
+  nativeBuildInputs = [ hello coreutils ];
+} ''
+  echo "Running integration tests..."
+  
+  # 测试 hello 命令
+  OUTPUT=$(hello)
+  if [[ ! "$OUTPUT" =~ "Hello" ]]; then
+    echo "ERROR: hello output incorrect"
+    exit 1
+  fi
+  
+  # 测试其他功能
+  echo "All tests passed!" > $out
+''
+```
+
+## 优势总结
+
+1. **学习成本低**：掌握一种模式，适用于所有类型
+2. **代码一致性**：统一的风格便于维护和审查
+3. **依赖管理简单**：所有类型共享相同的依赖注入机制
+4. **自动化程度高**：框架处理类型转换和程序入口推断
+
+## 相关资源
+
+- [软件包指南](../manual-pkgs/)
+- [应用程序指南](../manual-apps/)
+- [测试检查指南](../manual-checks/)

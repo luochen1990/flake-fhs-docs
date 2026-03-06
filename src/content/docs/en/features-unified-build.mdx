@@ -1,0 +1,181 @@
+---
+title: Unified packages, apps, checks Writing
+description: Learn how Flake FHS simplifies different output types with a unified build paradigm
+---
+
+## Problem Background
+
+In traditional Flake development, different types of outputs (`packages`, `apps`, `checks`) often use different definition methods:
+
+- `packages` typically use the `callPackage` pattern
+- `apps` require manually constructing `{ type = "app"; program = "..."; }` structure
+- `checks` have varied approaches
+
+This inconsistency increases learning costs and maintenance difficulty.
+
+## Flake FHS Solution
+
+Flake FHS provides a unified `package.nix` pattern where all output types use the same definition style.
+
+### Unified File Structure
+
+```
+pkgs/
+  hello.nix            # package output
+apps/
+  greeting/
+    package.nix        # app output
+checks/
+  smoke-test/
+    package.nix        # check output
+```
+
+### Unified Code Style
+
+All types use the same function signature pattern:
+
+```nix
+# pkgs/hello.nix - regular package
+{ writeShellScriptBin }:
+writeShellScriptBin "hello" ''
+  echo "Hello!"
+''
+```
+
+```nix
+# apps/greeting/package.nix - application
+{ writeShellScriptBin }:
+writeShellScriptBin "greeting-app" ''
+  echo "Hello! Current time: $(date)"
+''
+```
+
+```nix
+# checks/smoke-test/package.nix - test check
+{ runCommand, hello }:
+runCommand "smoke-test" { } ''
+  ${hello}/bin/hello > $out
+  grep "Hello!" $out
+''
+```
+
+## Automatic Conversion Mechanism
+
+The framework automatically converts output types based on directory location:
+
+### packages Output
+
+Directly uses derivation as output:
+
+```bash
+nix build .#hello
+```
+
+### apps Output
+
+Automatically generates app structure:
+
+```nix
+# Framework automatically generates
+{
+  type = "app";
+  program = "${derivation}/bin/greeting-app";
+}
+```
+
+```bash
+nix run .#greeting
+```
+
+### checks Output
+
+Automatically runs tests at build time:
+
+```bash
+nix flake check
+```
+
+## Consistency of Dependency Injection
+
+All types use the same `callPackage` mechanism:
+
+```nix
+# All files can obtain dependencies through parameters
+{ writeShellScriptBin, hello, fetchFromGitHub, ... }:
+# Your build logic
+```
+
+The framework automatically handles:
+- Parameter name matching
+- Scope inheritance (scope.nix)
+- Dependency propagation
+
+## Use Case Comparison
+
+| Output Type | Purpose | Build Command | Run Method |
+|-------------|---------|---------------|------------|
+| packages | Build artifacts | `nix build` | Use after build |
+| apps | Executable programs | `nix build` | `nix run` directly |
+| checks | Test verification | Executes at build time | `nix flake check` |
+
+## Practical Examples
+
+### Define an App with Dependencies
+
+```nix
+# apps/deploy/package.nix
+{ writeShellScriptBin, openssh, rsync }:
+writeShellScriptBin "deploy" ''
+  set -euo pipefail
+  
+  HOST=''${1:-}
+  if [ -z "$HOST" ]; then
+    echo "Usage: deploy <host>"
+    exit 1
+  fi
+  
+  export PATH="${openssh}/bin:${rsync}/bin:$PATH"
+  rsync -avz ./result/ "$HOST":/var/www/
+''
+```
+
+Run:
+
+```bash
+nix run .#deploy -- myserver.example.com
+```
+
+### Define an Integration Test
+
+```nix
+# checks/integration-test/package.nix
+{ runCommand, hello, coreutils }:
+runCommand "integration-test" {
+  nativeBuildInputs = [ hello coreutils ];
+} ''
+  echo "Running integration tests..."
+  
+  # Test hello command
+  OUTPUT=$(hello)
+  if [[ ! "$OUTPUT" =~ "Hello" ]]; then
+    echo "ERROR: hello output incorrect"
+    exit 1
+  fi
+  
+  # Test other functionality
+  echo "All tests passed!" > $out
+''
+```
+
+## Advantages Summary
+
+1. **Low Learning Curve**: Master one pattern, apply to all types
+2. **Code Consistency**: Unified style facilitates maintenance and review
+3. **Simple Dependency Management**: All types share the same dependency injection mechanism
+4. **High Automation**: Framework handles type conversion and program entry inference
+
+## Related Resources
+
+- [Packages Guide](../manual-pkgs/)
+- [Applications Guide](../manual-apps/)
+- [Checks Guide](../manual-checks/)
