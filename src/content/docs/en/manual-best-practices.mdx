@@ -29,6 +29,6 @@ The following are recommended practices for using Flake FHS. Following these pri
 ## Performance Optimization
 
 *   **Modular Management**
-    For projects with a large number of NixOS modules, Flake FHS's module loading mechanism (especially **subdirectory modules**) can help you better organize your code.
+    For projects with a large number of NixOS modules, Flake FHS's module loading mechanism (especially **Guarded Directory Modules**) can help you better organize your code.
     
-    **Recommendation**: Ensure that independent modules are placed in subdirectories with `options.nix` (i.e., **subdirectory modules**). This way, the configuration logic of the module is loaded only when `enable = true` is explicitly set, significantly reducing the overhead during Nix evaluation.
+    **Recommendation**: Ensure that independent modules are placed in subdirectories with `options.nix` (i.e., **Guarded Directory Modules**). This way, the configuration logic of the module is loaded only when `enable = true` is explicitly set, significantly reducing the overhead during Nix evaluation.

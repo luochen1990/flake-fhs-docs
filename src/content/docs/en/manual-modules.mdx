@@ -1,61 +1,160 @@
 ---
 title: NixOS Modules
-description: Learn how to organize reusable NixOS modules, including automatic discovery mechanism, Single-file Modules, and Subdirectory Modules usage
+description: Learn how to organize reusable NixOS modules, including three module types (Guarded, Traditional, Single-file) and best practices
 ---
 
 import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 
-The `modules/` directory is used to organize reusable NixOS modules. The system will automatically classify and load them based on directory characteristics, without manually maintaining `module-list.nix`.
+The `modules/` directory is used to organize reusable NixOS modules. The system automatically identifies and classifies them into three mutually exclusive module types based on directory characteristics, without manually maintaining `module-list.nix`.
 
-## Directory Structure and Loading Logic
+## Module Types
 
-The framework divides modules into two categories: **Single-file Module** and **Subdirectory Module**.
+The framework divides modules into three mutually exclusive types, ordered from simplest to most complex: **Single File Module**, **Traditional Directory Module**, and **Guarded Directory Module**.
 
 <FileTree>
 
 - modules/
   - base/  <Badge text="Normal Directory" variant="default" size="small" />
-    - shell.nix  <Badge text="Single-file Module" variant="default" size="small" />
-    - users.nix  <Badge text="Single-file Module" variant="default" size="small" />
+    - shell.nix  <Badge text="Single File Module" variant="default" size="small" />
+    - users.nix  <Badge text="Single File Module" variant="default" size="small" />
+  - personal/
+    - config.nix   <Badge text="Single File Module" variant="default" size="small" />
+  - tweaks/  <Badge text="Traditional Directory Module" variant="default" size="small" />
+    - default.nix  <Badge text="Direct Export" variant="default" size="small" />
+    - utils.nix    <Badge text="Helper File" variant="default" size="small" />
   - services/
-    - web-server/  <Badge text="Subdirectory Module" variant="default" size="small" />
+    - web-server/  <Badge text="Guarded Directory Module" variant="default" size="small" />
       - options.nix  <Badge text="Always Imported" variant="default" size="small" />
       - config.nix   <Badge text="Effective only when enable = true" variant="default" size="small" />
-      - sub-helper/  <Badge text="Helper Files" variant="default" size="small" />
-  - personal/
-    - config.nix   <Badge text="Single-file Module" variant="default" size="small" />
 
 </FileTree>
 
-### Loading Rules
+### 1. Single File Module
 
-<Steps>
+**Identifier**: Standalone `.nix` file
 
-1.  **Single-file Module**:
-    *   Any normal `.nix` file will be automatically imported.
-    *   Suitable for simple configuration (such as enabling a program, setting a user).
+**Features**:
+- Direct export, no auto-injected enable mechanism
+- Simplest module form
 
-2.  **Subdirectory Module**:
-    *   When `options.nix` exists in a directory, the directory is considered a **Subdirectory Module**.
-    *   **options.nix**: Always imported, used to define option interfaces.
-    *   **Other files** (e.g., `config.nix`, `default.nix`, etc.): Effective only when the module is **enabled**.
-        *   The framework automatically generates `config = lib.mkIf cfg.enable { ... }` wrapper to achieve this.
+**Use Case**: Simple configurations
 
-3.  **Normal Directory**:
-    *   Only serves as an organization container, the framework will recursively scan its contents.
+### 2. Traditional Directory Module
 
-</Steps>
+**Identifier**: Directory contains `default.nix` (no `options.nix`)
+
+**Features**:
+- Direct export, no auto-injected enable mechanism
+- **Compatible with nixpkgs upstream**: Uses standard `default.nix` structure, can be directly contributed to nixpkgs
+- No nesting support (subdirectories with `default.nix` are NOT recognized by the framework as independent modules)
+- Clear module boundaries, manages its own imports
+
+**Use Case**: Modules **prepared for contributing to nixpkgs upstream**, complex modules requiring manual control over which nix files to import
+
+**Example**:
+```
+modules/tweaks/
+├── default.nix  # Main module
+└── utils.nix    # Explicitly imported by default.nix
+```
+
+<Aside type="caution" title="Important Limitation">
+Traditional modules **do NOT support nesting**. Subdirectories with `default.nix` will NOT be recognized by the framework as independent modules. Use Guarded modules if nesting is needed.
+</Aside>
+
+### 3. Guarded Directory Module
+
+**Identifier**: Directory contains `options.nix`
+
+**Features**:
+- Auto-generates `enable` option
+- Config files automatically wrapped in `lib.mkIf enable { ... }`
+- Supports nesting (child modules check ALL parent enables)
+
+**Use Case**: **Complex modules** that need an enable option and want to split complex configurations into multiple smaller files for maintainability
+
+**Example**:
+```
+modules/services/web-server/
+├── options.nix  # Define options
+├── config.nix   # Main configuration (auto-wrapped in mkIf)
+└── logging.nix  # Logging configuration (also wrapped)
+```
+
+## Conflict Detection
+
+<Aside type="danger" title="options.nix and default.nix Conflict">
+A directory **cannot** have both `options.nix` and `default.nix`. This causes a build error because the framework cannot determine the module type.
+
+**Invalid Example**:
+```
+modules/myapp/
+├── options.nix  ❌ Conflict
+└── default.nix  ❌ Conflict
+```
+
+**Solutions**:
+- Option A: Rename `default.nix` to `config.nix` (becomes Guarded module)
+- Option B: Remove `options.nix` (becomes Traditional module)
+</Aside>
 
 ## Usage
 
-### Define a Subdirectory Module
+### Use Modules
+
+In `hosts/my-machine/configuration.nix`:
+
+```nix
+{
+  # Guarded modules need explicit enablement
+  services.web-server.enable = true;
+  services.web-server.port = 9000;
+  
+  # Traditional modules and Single File modules are auto-applied (no enable needed)
+  # Their configurations are automatically in effect
+}
+```
+
+### Define a Single File Module
+
+The simplest module form, just write configuration directly:
+
+```nix
+// modules/personal/config.nix
+{ config, lib, ... }:
+{
+  # Direct configuration, no auto-injected enable mechanism
+  users.users.alice = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ];
+  };
+}
+```
+
+### Define a Traditional Module
+
+For scenarios requiring full control over import logic:
+
+```nix
+// modules/tweaks/default.nix
+{ config, lib, ... }:
+{
+  # Direct configuration, no auto-injected enable mechanism
+  environment.systemPackages = [ /* ... */ ];
+  
+  # Can explicitly import helper files in the same directory
+  imports = [ ./utils.nix ];
+}
+```
+
+### Define a Guarded Module
 
 Take `modules/services/web-server` as an example:
 
 **1. `options.nix`: Define Interface**
 
-<Aside type="caution" title="Strict Mode">
-By default, `optionsMode` is `strict`. You need to explicitly define the full option path (e.g., `options.services.web-server`), and the framework will check if it matches the directory structure.
+<Aside type="tip" title="Strict Mode">
+The framework requires explicitly defining the full option path (e.g., `options.services.web-server`), and checks if it matches the directory structure.
 </Aside>
 
 <Aside type="tip" title="Auto Enable">
@@ -77,7 +176,7 @@ The framework automatically generates an `enable` option under the module path (
 
 **2. `config.nix`: Implementation Logic**
 
-By default, it will be wrapped in `mkIf cfg.enable { ... }`.
+Config files are automatically wrapped in `lib.mkIf`, **no need to add manually**.
 
 ```nix
 { config, pkgs, ... }:
@@ -85,7 +184,8 @@ let
   cfg = config.services.web-server;
 in
 {
-  # No need to manually write config = lib.mkIf cfg.enable ...
+  # No need to manually write config = lib.mkIf cfg.enable { ... }
+  # Framework auto-wraps this
 
   systemd.services.web-server = {
     description = "Simple Python Web Server";
@@ -98,14 +198,50 @@ in
 }
 ```
 
-### Use Module
+### Define a Traditional Module
 
-In `hosts/my-machine/configuration.nix`:
+For scenarios requiring full control over import logic:
 
 ```nix
+// modules/tweaks/default.nix
+{ config, lib, ... }:
 {
-  # Modules under modules/ have been automatically discovered and imported
-  services.web-server.enable = true;
-  services.web-server.port = 9000;
+  # Direct configuration, no auto-injected enable mechanism
+  environment.systemPackages = [ /* ... */ ];
+  
+  # Can explicitly import helper files in the same directory
+  imports = [ ./utils.nix ];
 }
 ```
+
+### Nested Guarded Modules
+
+Guarded modules support nesting. Child modules check **ALL parent enables**:
+
+<FileTree>
+
+- modules/
+  - network/  <Badge text="network.enable" variant="default" size="small" />
+    - options.nix
+    - config.nix
+    - services/
+      - web/  <Badge text="network.enable && network.services.web.enable" variant="default" size="small" />
+        - options.nix
+        - config.nix
+
+</FileTree>
+
+Generated `mkIf` conditions:
+- `network/config.nix`: `lib.mkIf config.network.enable { ... }`
+- `network/services/web/config.nix`: `lib.mkIf (config.network.enable && config.network.services.web.enable) { ... }`
+
+## Design Decisions
+
+<Aside type="note" title="Why Don't Traditional Modules Support Nesting?">
+Traditional modules are designed to be compatible with traditional Nix directory modules, with users manually controlling imports, so nesting has little meaning here.
+
+- **Traditional = Compatible with tradition**: Manual import control, consistent with nixpkgs upstream
+- **Guarded = Nestable**: Supports hierarchical enable control
+
+Use Guarded modules if you need nesting structures.
+</Aside>

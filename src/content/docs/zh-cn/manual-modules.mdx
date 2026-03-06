@@ -1,61 +1,160 @@
 ---
 title: NixOS 模块 (Modules)
-description: 学习如何组织可复用的 NixOS 模块，包括自动发现机制、单文件模块 (Single-file Modules) 和 子目录模块 (Subdirectory Modules) 的使用
+description: 学习如何组织可复用的 NixOS 模块，包括三种模块类型（Guarded、Traditional、Single-file）的使用方法和最佳实践
 ---
 
 import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 
-`modules/` 目录用于组织可复用的 NixOS 模块。系统将根据目录特征自动分类加载，无需手动维护 `module-list.nix`。
+`modules/` 目录用于组织可复用的 NixOS 模块。系统将根据目录特征自动识别并分类为三种互斥的模块类型，无需手动维护 `module-list.nix`。
 
-## 目录结构与加载逻辑
+## 模块分类
 
-框架将模块分为两类：**单文件模块** (Single-file Module) 和 **子目录模块** (Subdirectory Module)。
+框架将模块分为三种互斥的类型，按复杂度从低到高依次为：**Single File Module**、**Traditional Directory Module** 和 **Guarded Directory Module**。
 
 <FileTree>
 
 - modules/
   - base/  <Badge text="普通目录" variant="default" size="small" />
-    - shell.nix  <Badge text="单文件模块" variant="default" size="small" />
-    - users.nix  <Badge text="单文件模块" variant="default" size="small" />
+    - shell.nix  <Badge text="Single File Module" variant="default" size="small" />
+    - users.nix  <Badge text="Single File Module" variant="default" size="small" />
+  - personal/
+    - config.nix   <Badge text="Single File Module" variant="default" size="small" />
+  - tweaks/  <Badge text="Traditional Directory Module" variant="default" size="small" />
+    - default.nix  <Badge text="直接导出" variant="default" size="small" />
+    - utils.nix    <Badge text="辅助文件" variant="default" size="small" />
   - services/
-    - web-server/  <Badge text="子目录模块" variant="default" size="small" />
+    - web-server/  <Badge text="Guarded Directory Module" variant="default" size="small" />
       - options.nix  <Badge text="总是导入" variant="default" size="small" />
       - config.nix   <Badge text="仅当 enable = true 时生效" variant="default" size="small" />
-      - sub-helper/  <Badge text="辅助文件" variant="default" size="small" />
-  - personal/
-    - config.nix   <Badge text="单文件模块" variant="default" size="small" />
 
 </FileTree>
 
-### 加载规则
+### 1. Single File Module（单文件模块）
 
-<Steps>
+**识别标识**：独立的 `.nix` 文件
 
-1.  **单文件模块 (Single-file Module)**:
-    *   任何普通 `.nix` 文件都会被自动导入。
-    *   适用于简单的配置（如开启某个程序、设置某个用户）。
+**特点**：
+- 直接导出，无 enable 自动注入机制
+- 最简单的模块形式
 
-2.  **子目录模块 (Subdirectory Module)**:
-    *   当目录下存在 `options.nix` 时，该目录被视为**子目录模块**。
-    *   **options.nix**: 总是被导入，用于定义选项接口。
-    *   **其他文件** (如 `config.nix`, `default.nix` 等): 只有当该模块被**启用**时才会生效。
-        *   框架会自动生成 `config = lib.mkIf cfg.enable { ... }` 包装器来实现这一点。
+**适用场景**：简单配置
 
-3.  **普通目录**:
-    *   仅作为组织容器，框架会递归扫描其中的内容。
+### 2. Traditional Directory Module（传统目录模块）
 
-</Steps>
+**识别标识**：目录包含 `default.nix`（且无 `options.nix`）
+
+**特点**：
+- 直接导出，无 enable 自动注入机制
+- **与 nixpkgs 上游兼容**：使用标准的 `default.nix` 结构，可以直接贡献给 nixpkgs
+- 不支持嵌套（子目录中即便存在 `default.nix` 也不会被框架当成独立模块）
+- 模块边界清晰，自行管理 imports
+
+**适用场景**：预备贡献给 **nixpkgs 上游**的模块、需要手动控制要导入哪些 nix 文件的复杂模块
+
+**示例**：
+```
+modules/tweaks/
+├── default.nix  # 主模块
+└── utils.nix    # 被 default.nix 显式导入
+```
+
+<Aside type="caution" title="重要限制">
+Traditional 模块**不支持嵌套**。子目录中即便存在 `default.nix` 也不会被框架当成独立模块。如果需要嵌套，请使用 Guarded 模块。
+</Aside>
+
+### 3. Guarded Directory Module（受保护的目录模块）
+
+**识别标识**：目录包含 `options.nix`
+
+**特点**：
+- 自动生成 `enable` 选项
+- 配置文件自动包裹在 `lib.mkIf enable { ... }` 中
+- 支持嵌套（子模块会检查所有父级的 enable）
+
+**适用场景**：需要定义开关选项，并希望将复杂配置拆分到多个小文件中进行维护的**复杂模块**
+
+**示例**：
+```
+modules/services/web-server/
+├── options.nix  # 定义选项
+├── config.nix   # 主配置（自动包裹在 mkIf 中）
+└── logging.nix  # 日志配置（也会被包裹）
+```
+
+## 冲突检测
+
+<Aside type="danger" title="options.nix 与 default.nix 冲突">
+同一目录下**不能**同时存在 `options.nix` 和 `default.nix`。这会导致构建错误，因为框架无法确定模块类型。
+
+**错误示例**：
+```
+modules/myapp/
+├── options.nix  ❌ 冲突
+└── default.nix  ❌ 冲突
+```
+
+**解决方案**：
+- 选择 A：重命名 `default.nix` 为 `config.nix`（变为 Guarded 模块）
+- 选择 B：删除 `options.nix`（变为 Traditional 模块）
+</Aside>
 
 ## 使用方法
 
-### 定义一个子目录模块
+### 使用模块
+
+在 `hosts/my-machine/configuration.nix` 中：
+
+```nix
+{
+  # Guarded 模块需要显式启用
+  services.web-server.enable = true;
+  services.web-server.port = 9000;
+  
+  # Traditional 模块和 Single File 模块自动生效（无需 enable）
+  # 它们的配置已自动应用
+}
+```
+
+### 定义 Single File 模块
+
+最简单的模块形式，直接编写配置：
+
+```nix
+# modules/personal/config.nix
+{ config, lib, ... }:
+{
+  # 直接定义配置，无 enable 自动注入机制
+  users.users.alice = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ];
+  };
+}
+```
+
+### 定义 Traditional 模块
+
+适用于需要完全控制导入逻辑的场景：
+
+```nix
+# modules/tweaks/default.nix
+{ config, lib, ... }:
+{
+  # 直接定义配置，无 enable 自动注入机制
+  environment.systemPackages = [ /* ... */ ];
+  
+  # 可以显式导入同目录下的辅助文件
+  imports = [ ./utils.nix ];
+}
+```
+
+### 定义 Guarded 模块
 
 以 `modules/services/web-server` 为例：
 
 **1. `options.nix`: 定义接口**
 
-<Aside type="caution" title="严格模式 (Strict Mode)">
-默认情况下，`optionsMode` 为 `strict`。你需要显式定义完整的选项路径（例如 `options.services.web-server`），框架会检查其是否匹配目录结构。
+<Aside type="tip" title="严格模式">
+框架要求显式定义完整的选项路径（例如 `options.services.web-server`），并会检查其是否匹配目录结构。
 </Aside>
 
 <Aside type="tip" title="自动 Enable">
@@ -77,7 +176,7 @@ import { FileTree, Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 **2. `config.nix`: 实现逻辑**
 
-默认会被包裹在 `mkIf cfg.enable { ... }` 中。
+配置文件会自动被包裹在 `lib.mkIf` 中，**无需手动添加**。
 
 ```nix
 { config, pkgs, ... }:
@@ -85,7 +184,8 @@ let
   cfg = config.services.web-server;
 in
 {
-  # 无需手动写 config = lib.mkIf cfg.enable ...
+  # 无需手动写 config = lib.mkIf cfg.enable { ... }
+  # 框架已自动包裹
 
   systemd.services.web-server = {
     description = "Simple Python Web Server";
@@ -98,14 +198,50 @@ in
 }
 ```
 
-### 使用模块
+### 定义 Traditional 模块
 
-在 `hosts/my-machine/configuration.nix` 中：
+适用于需要完全控制导入逻辑的场景：
 
 ```nix
+# modules/tweaks/default.nix
+{ config, lib, ... }:
 {
-  # modules/ 下的模块已被自动发现并导入
-  services.web-server.enable = true;
-  services.web-server.port = 9000;
+  # 直接定义配置，无 enable 自动注入机制
+  environment.systemPackages = [ /* ... */ ];
+  
+  # 可以显式导入同目录下的辅助文件
+  imports = [ ./utils.nix ];
 }
 ```
+
+### 嵌套 Guarded 模块
+
+Guarded 模块支持嵌套，子模块会检查**所有父级的 enable**：
+
+<FileTree>
+
+- modules/
+  - network/  <Badge text="network.enable" variant="default" size="small" />
+    - options.nix
+    - config.nix
+    - services/
+      - web/  <Badge text="network.enable && network.services.web.enable" variant="default" size="small" />
+        - options.nix
+        - config.nix
+
+</FileTree>
+
+生成的 `mkIf` 条件：
+- `network/config.nix`: `lib.mkIf config.network.enable { ... }`
+- `network/services/web/config.nix`: `lib.mkIf (config.network.enable && config.network.services.web.enable) { ... }`
+
+## 设计决策
+
+<Aside type="note" title="为什么 Traditional 模块不支持嵌套？">
+Traditional 模块被设计为兼容传统的 Nix 目录模块，由用户手动控制导入，嵌套在这里本就无甚意义。
+
+- **Traditional = 兼容传统**：手动控制导入，与 nixpkgs 上游一致
+- **Guarded = 可嵌套的**：支持层级化的 enable 控制
+
+如果需要嵌套结构，请使用 Guarded 模块。
+</Aside>
