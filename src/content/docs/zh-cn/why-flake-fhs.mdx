@@ -3,6 +3,14 @@ title: 认识 Flake FHS
 description: 深入了解传统 Nix Flake 开发的问题以及 Flake FHS 如何解决这些问题
 ---
 
+在维护多个 Nix Flake 项目时，我们经常面临以下问题：
+
+1.  **样板代码重复**：每个项目都需要编写大量雷同的 `flake.nix` 代码来处理 inputs、systems 遍历和模块导入。
+2.  **结构差异巨大**：缺乏统一的目录规范，导致接手不同项目时需要花费额外精力理解其文件组织方式。
+3.  **工具链集成难**：由于缺乏标准化的目录语义，难以开发通用的自动化工具来辅助开发。
+
+**Flake FHS** 通过引入一套标准的文件系统层次结构 (FHS)，将 Flake Outputs 直接映射到文件系统。**只要看到了目录结构，你就知道对应的 Output 在哪里。**
+
 ## 传统的 Nix Flake 开发
 
 使用 Nix Flake 进行开发时，你需要在 `flake.nix` 中处理各种样板代码。
@@ -323,93 +331,6 @@ shells/                # 开发环境
 - 可以基于此结构开发自动化工具
 - 降低沟通和理解成本
 
-## 其他实用特性
-
-### Colmena 集成
-
-**问题**：传统方式需要为 Colmena 单独配置 hive 结构，与 flake outputs 不一致。
-
-**Flake FHS 的解决方式**：
-
-```nix
-outputs = inputs@{ flake-fhs, ... }:
-  flake-fhs.lib.mkFlake { inherit inputs; } {
-    colmena.enable = true;  # 一行启用
-  };
-```
-
-框架会自动：
-
-- 从 `hosts/` 发现所有主机
-- 生成 `colmenaHive` output
-- 为每个主机注入 `profileName`
-
-部署：
-
-```bash
-nix run github:zhaofengli/colmena -- apply
-```
-
-### 统一的构建范式
-
-**问题**：不同类型的输出（packages, apps, checks）可能使用不同的构建方式。
-
-**Flake FHS 的解决方式**：
-
-所有类型都使用相同的 `package.nix` 模式：
-
-```nix
-# pkgs/hello.nix
-{ writeShellScriptBin }:
-writeShellScriptBin "hello" ''
-  echo "Hello!"
-''
-
-# apps/greeting/package.nix
-{ writeShellScriptBin }:
-writeShellScriptBin "greeting-app" ''
-  echo "Hello! Current time: $(date)"
-''
-
-# checks/smoke-test/package.nix
-{ runCommand, hello }:
-runCommand "smoke-test" { } ''
-  ${hello}/bin/hello > $out
-  grep "Hello!" $out
-''
-```
-
-框架会自动：
-
-- 为 `apps/` 中的包生成 app structure
-- 为 `checks/` 中的包在构建时运行测试
-- 使用相同的 `callPackage` 机制进行依赖注入
-
-## 渐进式采用
-
-**问题**：担心大规模重构项目成本太高。
-
-**Flake FHS 的解决方式**：
-
-支持混合模式，你可以：
-
-1. **完全采用**：所有 outputs 由 Flake FHS 生成
-2. **混合模式**：部分由框架生成，部分手动定义
-3. **逐步迁移**：先迁移包定义，再迁移模块，最后迁移配置
-
-示例（混合模式）：
-
-```nix
-outputs = inputs@{ flake-fhs, ... }:
-  flake-fhs.lib.mkFlake { inherit inputs; } {
-    # 自动生成的 outputs
-  }
-  // {
-    # 手动定义的额外 outputs
-    someCustomOutput = { };
-  };
-```
-
 ## 对比总结
 
 | 问题 | 传统方式 | Flake FHS |
@@ -422,66 +343,4 @@ outputs = inputs@{ flake-fhs, ... }:
 | 添加新包 | 修改 `flake.nix` | 创建文件即可 |
 | 学习曲线 | 需要深入理解 Flake API | 只需了解目录约定 |
 
-## 如何开始
 
-### 初始化项目
-
-```bash
-nix flake init --template github:luochen1990/flake-fhs
-```
-
-### 添加第一个包
-
-创建 `pkgs/my-tool.nix`：
-
-```nix
-{ writeShellScriptBin }:
-writeShellScriptBin "my-tool" ''
-  echo "My tool is working!"
-''
-```
-
-构建并运行：
-
-```bash
-nix build .#my-tool
-./result/bin/my-tool
-```
-
-### 添加第一个模块
-
-创建 `modules/mymodule/options.nix`:
-
-```sh
-touch modules/mymodule/options.nix
-```
-
-创建 `modules/mymodule/config.nix`:
-
-```nix
-{ config, ... }:
-{
-  config = {
-    # Enable flakes and nix-command
-    nix.settings.experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
-  };
-}
-```
-
-在 `hosts/laptop/configuration.nix` 中启用：
-
-```nix
-{ ... }:
-{
-  mymodule.enable = true;
-}
-```
-
-## 更多信息
-
-- 官方文档站：https://flake-fhs.lambda.lc
-- GitHub 仓库：https://github.com/luochen1990/flake-fhs
-- GitHub 文档仓库：https://github.com/luochen1990/flake-fhs-docs (当文档站挂了的时候,可以直接读这个仓库下 src/content/docs 目录里的文档文件)

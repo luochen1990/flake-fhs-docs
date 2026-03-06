@@ -5,16 +5,6 @@ description: Flake FHS 核心概念与快速入门指南
 
 import { LinkCard, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-**为什么需要 Flake FHS？**
-
-在维护多个 Nix Flake 项目时，我们经常面临以下问题：
-
-1.  **样板代码重复**：每个项目都需要编写大量雷同的 `flake.nix` 代码来处理 inputs、systems 遍历和模块导入。
-2.  **结构差异巨大**：缺乏统一的目录规范，导致接手不同项目时需要花费额外精力理解其文件组织方式。
-3.  **工具链集成难**：由于缺乏标准化的目录语义，难以开发通用的自动化工具来辅助开发。
-
-**Flake FHS** 通过引入一套标准的文件系统层次结构 (FHS)，将 Flake Outputs 直接映射到文件系统。**只要看到了目录结构，你就知道对应的 Output 在哪里。**
-
 ## 1分钟入门 (Tutorial)
 
 <Steps>

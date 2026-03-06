@@ -5,14 +5,6 @@ description: Flake FHS Core Concepts and Quick Start Guide
 
 import { LinkCard, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-**Why Flake FHS?**
-
-Nix Flake provides great freedom, but this often leads to a **maintainability crisis** in projects:
-*   **Hard to locate source code**: It is extremely difficult to find the source code definition corresponding to `packages.x86_64-linux.app` in hundreds of lines of `flake.nix`.
-*   **Inconsistent structure**: Every project is organized differently, increasing the learning cost.
-
-**Flake FHS** introduces a standard Filesystem Hierarchy Standard (FHS) to directly map Flake Outputs to the filesystem. **As long as you see the directory structure, you know where the corresponding Output is.**
-
 ## 1 Minute Tutorial
 
 <Steps>
