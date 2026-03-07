@@ -33,10 +33,10 @@ export default defineConfig({
 						en: 'Getting Started',
 					},
 					items: [
-						{ slug: 'why-flake-fhs' },
-						{ slug: 'manual' },
-						{ slug: 'more-examples' },
-						{ slug: 'directory-map' },
+						{ slug: 'tutorial-intro' },
+						{ slug: 'tutorial-quick-start' },
+						{ slug: 'tutorial-examples' },
+						{ slug: 'tutorial-directory-map' },
 					],
 				},
 				{

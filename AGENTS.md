@@ -45,7 +45,7 @@
     - `src/content/docs/zh-cn/`: SSOT 文档源内容。
     - `src/content/docs/en/`: 英文翻译。
     - `src/assets/`: 静态资源（图片、Logo 等）。
-- **文件命名**: 使用 kebab-case 命名法（如 `manual-best-practices.md`）。
+- **文件命名**: 使用统一前缀 + kebab-case 命名法（详见 4.4 节）。
 
 ### 4.1 示例编写原则
 
@@ -72,6 +72,25 @@
 - **单文件模块 (Single-file Module)**: 例如 `modules/nixos.nix`。
 - **子目录模块 (Subdirectory Module)**: 例如 `modules/nixos/options.nix`。
 - **包域 (Scope)**: 例如 `pkgs/python/scope.nix`。
+
+### 4.4 文件命名规范
+
+文档文件应按照所属层级使用统一的前缀，以便快速识别文件用途：
+
+| 前缀 | 用途 | 示例 |
+|------|------|------|
+| `tutorial-*` | 开始使用/入门教程 | `tutorial-intro.mdx`, `tutorial-quick-start.mdx`, `tutorial-examples.mdx`, `tutorial-directory-map.mdx` |
+| `manual-*` | 核心指南/功能手册 | `manual-pkgs.mdx`, `manual-modules.mdx`, `manual-hosts.mdx` |
+| `features-*` | 高级特性/扩展功能 | `features-colmena.mdx`, `features-treefmt.mdx`, `features-gradual-adoption.mdx` |
+
+**命名原则**:
+- **统一前缀**: 同一章节/类型的文件应使用相同前缀，便于组织和查找。
+- **kebab-case**: 所有文件名使用 kebab-case 命名法（如 `manual-best-practices.mdx`）。
+- **语义清晰**: 文件名应能直观反映内容主题，避免过于模糊或通用。
+
+**例外**:
+- `index.mdx`: 站点首页，无需前缀。
+- `manual.mdx`: 如果"快速上手"属于教程，应重命名为 `tutorial-quick-start.mdx` 以符合规范。
 
 ## 5. 链接维护原则
 
