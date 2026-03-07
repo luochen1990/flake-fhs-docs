@@ -48,7 +48,6 @@ export default defineConfig({
 						{ slug: 'manual-hosts' },
 						{ slug: 'manual-modules' },
 						{ slug: 'manual-pkgs' },
-						{ slug: 'manual-pkgs-scope' },
 						{ slug: 'manual-apps' },
 						{ slug: 'manual-checks' },
 						{ slug: 'manual-shells' },
@@ -68,13 +67,14 @@ export default defineConfig({
 					],
 				},
 				{
-					label: '配置参考',
+					label: '进阶内容',
 					translations: {
-						en: 'Configuration Reference',
+						en: 'Advanced Topics',
 					},
 					items: [
-						{ slug: 'manual-config' },
-						{ slug: 'manual-best-practices' },
+						{ slug: 'advanced-best-practices' },
+						{ slug: 'advanced-pkgs-scope' },
+						{ slug: 'advanced-config' },
 					],
 				},
 			],
