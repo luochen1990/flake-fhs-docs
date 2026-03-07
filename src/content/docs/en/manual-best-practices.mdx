@@ -1,13 +1,14 @@
 ---
 title: Best Practices
+description: Recommended practices for Flake FHS
 ---
 
-The following are recommended practices for using Flake FHS. Following these principles can help you build more maintainable and better-performing projects.
+The following are recommended practices for using Flake FHS. Following these principles can help you build more maintainable projects.
 
 ## Project Organization
 
 *   **Follow Conventions**
-    Try to use the framework's default directory structure and reduce custom configurations. Convention over Configuration is the core philosophy of Flake FHS.
+    Try to use the framework's default directory structure and reduce custom configurations. A unified directory structure makes projects easier to understand and maintain.
 
 *   **Modularization**
     Split complex system configurations into small, reusable modules (`modules/`). Avoid piling up all configurations in a huge `configuration.nix`.
@@ -26,9 +27,41 @@ The following are recommended practices for using Flake FHS. Following these pri
 *   **Formatting**
     Use `nix fmt` to keep code style unified. Consistent code style helps with collaboration.
 
-## Performance Optimization
+---
 
-*   **Modular Management**
-    For projects with a large number of NixOS modules, Flake FHS's module loading mechanism (especially **Guarded Directory Modules**) can help you better organize your code.
-    
-    **Recommendation**: Ensure that independent modules are placed in subdirectories with `options.nix` (i.e., **Guarded Directory Modules**). This way, the configuration logic of the module is loaded only when `enable = true` is explicitly set, significantly reducing the overhead during Nix evaluation.
+## Migration and Integration
+
+*   **Progressive Migration**
+    If you already have a large flake, you don't need to refactor everything at once. You can use `flake-fhs` to manage only some outputs (such as `packages`) while keeping the rest as-is for gradual migration.
+
+    ```nix
+    {
+      inputs = {
+        nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+        flake-fhs.url = "github:luochen1990/flake-fhs";
+      };
+
+      outputs = inputs@{ self, nixpkgs, flake-fhs, ... }:
+        let
+          # 1. Create a flake-fhs instance, but don't return it directly as outputs
+          fhs = flake-fhs.lib.mkFlake { inherit inputs; } { };
+        in
+        {
+          # 2. "Pick" the parts you want to migrate (e.g., packages)
+          # fhs.packages already handles all system traversal
+          packages = fhs.packages;
+
+          # 3. Keep other parts in the original manual definition style
+          nixosConfigurations.my-machine = nixpkgs.lib.nixosSystem {
+            # ... existing complex configuration ...
+          };
+        };
+    }
+    ```
+
+    This approach allows you to:
+    - Migrate parts gradually without a one-time refactor
+    - Continue normal development during migration
+    - Choose migration priority and pace as needed
+
+    **Migration Tip**: Prioritize migrating frequently modified content (such as `pkgs/`, `shells/`), while stable content can be migrated later.

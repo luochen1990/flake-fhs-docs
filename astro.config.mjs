@@ -62,10 +62,9 @@ export default defineConfig({
 						en: 'More Features',
 					},
 					items: [
-						{ slug: 'features-colmena' },
-						{ slug: 'features-unified-build' },
-						{ slug: 'features-gradual-adoption' },
 						{ slug: 'features-treefmt' },
+						{ slug: 'features-unified-build' },
+						{ slug: 'features-colmena' },
 					],
 				},
 				{

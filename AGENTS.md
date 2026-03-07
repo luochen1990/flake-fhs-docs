@@ -81,12 +81,13 @@
 |------|------|------|
 | `tutorial-*` | 开始使用/入门教程 | `tutorial-intro.mdx`, `tutorial-quick-start.mdx`, `tutorial-examples.mdx`, `tutorial-directory-map.mdx` |
 | `manual-*` | 核心指南/功能手册 | `manual-pkgs.mdx`, `manual-modules.mdx`, `manual-hosts.mdx` |
-| `features-*` | 高级特性/扩展功能 | `features-colmena.mdx`, `features-treefmt.mdx`, `features-gradual-adoption.mdx` |
+| `features-*` | 高级特性/扩展功能 | `features-treefmt.mdx`, `features-unified-build.mdx`, `features-colmena.mdx` |
 
 **命名原则**:
 - **统一前缀**: 同一章节/类型的文件应使用相同前缀，便于组织和查找。
 - **kebab-case**: 所有文件名使用 kebab-case 命名法（如 `manual-best-practices.mdx`）。
 - **语义清晰**: 文件名应能直观反映内容主题，避免过于模糊或通用。
+- **频率优先**: 同一章节内的页面排序应遵循"高频特性放前面，低频特性放后面"的原则，确保用户能快速找到最常用的功能。
 
 **例外**:
 - `index.mdx`: 站点首页，无需前缀。
