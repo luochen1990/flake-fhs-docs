@@ -1,23 +1,32 @@
 ---
 title: Understanding Flake FHS
-description: Deep dive into problems with traditional Nix Flake development and how Flake FHS solves them
+description: Deeply understand the pain points of traditional Nix Flake development and how Flake FHS systematically solves them
 ---
 
-When maintaining multiple Nix Flake projects, we often face the following problems:
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-1.  **Repeated boilerplate code**: Every project requires writing a lot of duplicate `flake.nix` code to handle inputs, system traversal, and module imports.
-2.  **Huge structural differences**: Lack of unified directory standards makes it take extra effort to understand file organization when taking over different projects.
-3.  **Difficult toolchain integration**: Without standardized directory semantics, it's hard to develop general-purpose automation tools to assist development.
+**Flake FHS** introduces a standard **Filesystem Hierarchy Standard (FHS)** to directly map Flake Outputs to the filesystem. **As long as you see the directory structure, you know where the corresponding Output is.**
 
-**Flake FHS** introduces a standard Filesystem Hierarchy Standard (FHS) to directly map Flake Outputs to the filesystem. **As long as you see the directory structure, you know where the corresponding Output is.**
+## Target Audience
 
-## Traditional Nix Flake Development
+Flake FHS is especially for you if:
 
-When developing with Nix Flakes, you need to handle various boilerplate code in `flake.nix`.
+- **You're new to Nix** and want to migrate to Flake but don't know where to start
+- **You have extensive NixOS experience** and with a growing config repository, you have a strong desire to refactor it for better maintainability
+- **You just want a turnkey Flake experience** without caring about Flake's design details
+- **You want to learn Flake project organization best practices**, even if you don't end up using this framework
+
+<Aside type="note">
+If you already have a deep understanding of Flake and are completely satisfied with your current project structure, Flake FHS may not bring significant additional value.
+</Aside>
+
+## Why Flake FHS
+
+Traditional Nix Flake development has the following core problems:
 
 ### Problem 1: Repeated Boilerplate Code
 
-Adding a package typically requires a `flake.nix` like this:
+To add a package, the traditional approach requires a `flake.nix` like this:
 
 ```nix
 {
@@ -40,71 +49,14 @@ Adding a package typically requires a `flake.nix` like this:
 }
 ```
 
-This code has the following issues:
-
+**Issues**:
 - The `forAllSystems` pattern is repeated in every project
-- System traversal logic is mixed with package definitions
-- Adding new packages requires modifying `flake.nix`, which is error-prone
+- System traversal logic mixed with package definitions
+- Adding new packages requires modifying `flake.nix`, error-prone
 
-### Problem 2: Difficult Source Code Location
+**Flake FHS Solution**:
 
-Suppose you see a project with multiple package definitions, and you want to find the source code location for a specific package. In traditional flakes, this often requires:
-
-- Reading complex `flake.nix` files
-- Understanding the project's organization
-- Each project has its own directory structure conventions
-
-This makes taking over new projects require extra time to understand their file organization.
-
-### Problem 3: Tedious Module Management
-
-In NixOS module development, the traditional approach is:
-
-```nix
-{
-  imports = [
-    ./modules/tailscale.nix
-    ./modules/ssh.nix
-    ./modules/firewall.nix
-  ];
-}
-```
-
-Problems with this approach:
-
-- Manual maintenance of import lists
-- Easy to miss modules
-- Module enable status is not intuitive
-
-### Problem 4: Inconsistent Dependency Injection
-
-When building different types of packages, you may need to:
-
-- Manually call `callPackage`
-- Handle different scopes (like `pkgs.python3Packages`)
-- Repeat the same dependency injection logic in multiple places
-
-### Problem 5: Lack of Unified Standards
-
-Different Nix projects often adopt different:
-
-- Directory structures
-- Naming conventions
-- Organization methods
-
-This leads to:
-
-- Team members need to learn new project conventions
-- Difficult to develop general-purpose automation tools
-- Increased code review and understanding costs
-
-## Flake FHS Solutions
-
-Flake FHS solves the above problems by automatically generating flake outputs through a standardized directory structure.
-
-### Solution 1: Zero Boilerplate Code
-
-In Flake FHS, `flake.nix` only needs:
+`flake.nix` only needs this:
 
 ```nix
 {
@@ -116,7 +68,7 @@ In Flake FHS, `flake.nix` only needs:
 }
 ```
 
-When adding a package, just create `pkgs/hello.nix`:
+To add a package, just create `pkgs/hello.nix`:
 
 ```nix
 { writeShellScriptBin }:
@@ -125,21 +77,21 @@ writeShellScriptBin "hello" ''
 ''
 ```
 
-**Flake FHS handles**:
+The framework automatically traverses systems, discovers packages, injects dependencies, and generates outputs.
 
-- Automatically traverses all supported systems
-- Automatically discovers all package definitions in `pkgs/` directory
-- Automatically calls `callPackage` for dependency injection
-- Generates corresponding `packages.<system>.<name>` outputs
+### Problem 2: Difficult Source Location
 
-You don't need to modify `flake.nix`, just create or modify package definition files.
+When taking over a new project, finding a package's source location often requires:
+- Reading complex `flake.nix` files
+- Understanding project-specific organization
+- Each project has its own directory structure conventions
 
-### Solution 2: WYSIWYG Directory Mapping
+**Flake FHS Solution**:
 
-Flake FHS defines clear directory-to-flake outputs mapping:
+Defines clear mappings from directories to flake outputs:
 
-| Directory | Corresponding Output | Nix Command |
-|-----------|---------------------|-------------|
+| Directory | Output | Nix Command |
+|------|-------------|-----------|
 | `pkgs/` | `packages.<system>.<name>` | `nix build .#<name>` |
 | `apps/` | `apps.<system>.<name>` | `nix run .#<name>` |
 | `hosts/` | `nixosConfigurations.<name>` | `nixos-rebuild switch --flake .#<name>` |
@@ -149,198 +101,266 @@ Flake FHS defines clear directory-to-flake outputs mapping:
 | `lib/` | `lib.<name>` | `nix eval .#lib.<name>` |
 | `templates/` | `templates.<name>` | `nix flake init --template .#<name>` |
 
-This design makes:
+See the directory structure and immediately know where the output is. Code location is predictable.
 
-- See the directory structure and know where the corresponding output is
-- Package definitions directly correspond to file locations (`pkgs/hello.nix`)
-- Any project's organization is predictable
+### Problem 3: Tedious Module Splitting
 
-### Solution 3: Automatic Module Discovery
-
-In Flake FHS, you just need to put modules in the `modules/` directory.
-
-Create `modules/tweaks/options.nix`:
-
-```sh
-touch modules/tweaks/options.nix
-```
-
-Create `modules/tweaks/config.nix`:
+Traditional NixOS module splitting requires:
 
 ```nix
-{ config, lib, pkgs, ... }:
 {
-  config = {
-    systemd.services.my-service = {
-      description = "My Service";
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig.ExecStart = "${pkgs.hello}/bin/hello";
-    };
-  };
+  imports = [
+    ./modules/tailscale.nix
+    ./modules/ssh.nix
+    ./modules/firewall.nix
+  ];
 }
 ```
 
-This is equivalent to `modules/tweaks/options.nix`:
+**Issues**:
+- Must manually maintain import lists
+- Easy to miss a module
+- Fine-grained splitting requires `lib.mkIf` boilerplate in every file
 
-```nix
-{ lib, ... }:
-{
-  options.tweaks.enable = lib.mkEnableOption "system tweaks";
-}
-```
+**Flake FHS Solution**:
 
-And `modules/tweaks/config.nix`:
+Put modules in the `modules/` directory for auto-discovery and registration. Combined with **Guarded Module**, the `enable` option and conditional logic are also auto-generated.
 
-```nix
-{ config, lib, pkgs, ... }:
-{
-  config = lib.mkIf config.tweaks.enable {
-    systemd.services.my-service = {
-      description = "My Service";
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig.ExecStart = "${pkgs.hello}/bin/hello";
-    };
-  };
-}
-```
+### Problem 4: Difficult Sub-Scope Package Management
 
-Use directly in configuration:
+nixpkgs' `pkgs/by-name/` mechanism only handles packages in the top-level `pkgs` scope. For sub-scopes (like `python3Packages`, `haskellPackages`), you need to:
+- Manually call `pkgs.python3Packages.callPackage`
+- Repeat scope specification in each package
+- Scattered dependency injection logic, hard to manage uniformly
 
-```nix
-{ ... }:
-{
-  tweaks.enable = true;  # Automatically imported and enabled
-}
-```
+**Flake FHS Solution: Scoped Package Tree**
 
-**Flake FHS handles**:
-
-- Automatically discovers all modules in `modules/` directory
-- Automatically determines if modules need enable options
-- Automatically generates `enable` option (if not manually defined)
-- Automatically registers to `nixosModules` output
-
-You don't need to manually maintain import lists or worry about missing modules.
-
-### Solution 4: Scoped Package Tree
-
-For packages that need specific scopes (like Python packages), traditional approaches might require:
-
-```nix
-# ❌ Traditional way, need to manually handle scope
-{
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
-  outputs = { self, nixpkgs }:
-    let
-      systems = [ "x86_64-linux" ];
-      forAllSystems = nixpkgs.lib.genAttrs systems (system: {
-        pkgs = import nixpkgs { inherit system; };
-      });
-    in
-    {
-      packages = forAllSystems ({ pkgs }: {
-        my-python-package = pkgs.python3Packages.buildPythonPackage {
-          pname = "my-package";
-          version = "1.0";
-          src = ./.;
-          propagatedBuildInputs = [ pkgs.python3Packages.requests ];
-        };
-      });
-    };
-}
-```
-
-In Flake FHS, use Scoped Package Tree:
+Define sub-scopes via `scope.nix`, packages in subdirectories automatically inherit:
 
 ```
 pkgs/
-  python/
-    scope.nix                    # Define scope
-      requests/
-        package.nix              # Inherit parent scope
-      numpy/
-        package.nix
+└── python/
+    ├── scope.nix           # Define scope
+    ├── my-app/
+    │   └── package.nix     # Auto-inherits python3Packages scope
+    └── my-lib/
+        └── package.nix
 ```
 
-Content of `pkgs/python/scope.nix`:
+### Problem 5: Lack of Unified Standards
 
-```nix
-{ pkgs, ... }:
-{
-  scope = pkgs.python3Packages;
-}
-```
+Different Nix projects often adopt different directory structures, naming conventions, and organization methods, leading to:
+- Team members need to learn new project conventions
+- Difficult to develop universal automation tools
+- Increased code review and understanding costs
 
-Content of `pkgs/python/requests/package.nix`:
+**Flake FHS Solution**:
 
-```nix
-# ✅ requests automatically injected from scope
-{ requests, buildPythonPackage, ... }:
-buildPythonPackage {
-  pname = "my-requests-wrapper";
-  version = "1.0";
-  src = ./.;
-  propagatedBuildInputs = [ requests ];  # Use directly
-}
-```
-
-**Flake FHS handles**:
-
-- `scope.nix` can replace or inherit parent scope
-- Packages in subdirectories automatically use current scope
-- `callPackage` automatically uses current scope as arguments
-- Supports multi-level nesting and mixed usage
-
-This makes dependency injection logic centralized in one place (`scope.nix`) rather than scattered across multiple package definitions.
-
-### Solution 5: Unified Directory Standards
-
-Flake FHS provides a standardized directory structure for all projects.
-
-Initialize a new project:
-
-```bash
-nix flake init --template github:luochen1990/flake-fhs#short
-```
-
-This generates the following structure:
+Provides standardized directory structure applicable to all projects:
 
 ```
-flake.nix              # Framework configuration
+flake.nix              # Framework config
 pkgs/                  # Packages
-  hello.nix
 apps/                  # Applications
-  greeting/
-    package.nix
 hosts/                 # NixOS configurations
-  laptop/
-    configuration.nix
 modules/               # NixOS modules
-  tweaks/
-    options.nix
-    config.nix
-shells/                # Development environments
-  python.nix
+shells/                # Development shells
 ```
 
-**Benefits of unified standards**:
+---
 
-- Any project uses the same directory structure
-- New members can quickly understand the project
-- Automation tools can be developed based on this structure
-- Reduces communication and understanding costs
+## Core Scenario Comparison
+
+Now that we understand the problems and solutions, let's see Flake FHS's advantages through concrete scenarios.
+
+### Scenario 1: Module Splitting
+
+Split configuration into multiple modules for separation of concerns.
+
+<Tabs>
+<TabItem label="Traditional 😫">
+
+**Simple Splitting**: Requires manually maintaining the `imports` list:
+
+```nix
+// configuration.nix
+{
+  imports = [
+    ./modules/desktop.nix
+    ./modules/network.nix
+    ./modules/services.nix
+    // Easy to forget adding new modules
+  ];
+}
+```
+
+**Fine-Grained Splitting**: Boilerplate required in every file:
+
+```nix
+// modules/my-website/options.nix
+{ lib, ... }:
+{
+  options.my-website.enable = lib.mkEnableOption "my website";
+}
+```
+
+```nix
+// modules/my-website/nginx.nix
+{ config, lib, ... }:
+{
+  config = lib.mkIf config.my-website.enable {
+    services.nginx.enable = true;
+  };
+}
+```
+
+```nix
+// modules/my-website/redis.nix
+{ config, lib, ... }:
+{
+  config = lib.mkIf config.my-website.enable {
+    services.redis.enable = true;
+  };
+}
+```
+
+```nix
+// configuration.nix
+{
+  imports = [
+    ./modules/my-website/options.nix
+    ./modules/my-website/nginx.nix
+    ./modules/my-website/redis.nix
+    // Easy to forget adding new files
+  ];
+}
+```
+
+**Splitting has a cost**: Must manually define options, maintain imports, and repeat boilerplate.
+
+</TabItem>
+
+<TabItem label="Flake FHS ✨">
+
+**Simple Splitting**: Just create directories, auto-discovered:
+
+```
+modules/
+├── desktop/
+│   ├── options.nix
+│   └── config.nix
+├── network/
+│   ├── options.nix
+│   └── config.nix
+└── services/
+    ├── options.nix
+    └── config.nix
+```
+
+**Fine-Grained Splitting**: Guarded Module auto-wraps, no boilerplate needed:
+
+```
+modules/
+└── my-website/
+    ├── options.nix    # Can be empty, enable option auto-generated
+    ├── nginx.nix      # Auto-wrapped with mkIf
+    └── redis.nix      # Auto-wrapped with mkIf
+```
+
+```nix
+// modules/my-website/nginx.nix
+{ ... }:
+{
+  // Automatically wrapped as: lib.mkIf config.my-website.enable { ... }
+  services.nginx.enable = true;
+}
+```
+
+**Splitting is zero-cost**: Split freely, no boilerplate required.
+
+</TabItem>
+</Tabs>
+
+### Scenario 2: Multi-Host Management
+
+Manage multiple NixOS machines (laptop, server, vm, etc.) in one repository.
+
+<Tabs>
+<TabItem label="Traditional 😫">
+
+Each host has its own Flake repository, no configuration sharing:
+
+```
+~/config-laptop/
+├── flake.nix
+└── configuration.nix
+
+~/config-server/
+├── flake.nix
+└── configuration.nix
+```
+
+Must manually copy-paste shared configuration, hard to keep in sync.
+
+</TabItem>
+
+<TabItem label="Flake FHS ✨">
+
+One repository for all hosts, shared modules:
+
+```
+my-nixos/
+├── flake.nix
+├── modules/
+│   ├── tweaks.nix       # System optimizations
+│   └── my-website.nix   # Website service
+└── hosts/
+    ├── laptop/
+    │   └── configuration.nix
+    └── server/
+        └── configuration.nix
+```
+
+```nix
+// hosts/laptop/configuration.nix
+{ ... }:
+{
+  networking.hostName = "laptop";
+  tweaks.enable = true;       // Only system optimizations
+}
+```
+
+```nix
+// hosts/server/configuration.nix
+{ ... }:
+{
+  networking.hostName = "server";
+  tweaks.enable = true;       // Shared module
+  my-website.enable = true;   // Host-specific
+}
+```
+
+</TabItem>
+</Tabs>
+
+---
 
 ## Comparison Summary
 
-| Problem | Traditional Approach | Flake FHS |
-|---------|---------------------|-----------|
-| Boilerplate code | Repeatedly write `forAllSystems` etc. | Zero boilerplate |
-| Source location | Need to read `flake.nix` | Directory is mapping, clear at a glance |
-| Module management | Manually maintain import lists | Automatic discovery and registration |
-| Dependency injection | Scattered, easy to be inconsistent | Centralized in `scope.nix` |
-| Project standards | Each project has its own conventions | Unified directory standards |
-| Adding new packages | Modify `flake.nix` | Just create files |
-| Learning curve | Need deep understanding of Flake API | Just understand directory conventions |
+| Dimension | Traditional | Flake FHS |
+|------|----------|-----------|
+| Boilerplate Code | Repeatedly write `forAllSystems` etc. | Zero boilerplate |
+| Source Location | Need to read `flake.nix` | Directory = mapping, clear at a glance |
+| Module Splitting | Manually maintain imports + write `mkIf` in each file | Auto-discovery + Guarded Module |
+| Sub-Scope Packages | Manually call `python3Packages.callPackage` | Scoped Package Tree |
+| Project Standards | Each project has own conventions | Unified directory standard |
+| Adding Content | Modify `flake.nix` | Just create a file |
+| Learning Curve | Need deep understanding of Flake API | Just understand directory conventions |
 
+---
 
+## Next Steps
+
+1. [Quick Start](../tutorial-quick-start) - Create your first project
+2. [Directory Mapping](../tutorial-directory-map) - Learn complete specification
+3. [Examples](../tutorial-examples) - See real-world usage
