@@ -7,54 +7,116 @@ import { LinkCard, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/com
 
 ## 1 Minute Tutorial
 
+<Tabs>
+  <TabItem label="Pure Nix Project" icon="rocket">
+
+Suitable as a **nixos-config** or **pure Nix package repository**.
+
 <Steps>
 
-1.  **Initialize Project**
+1. **Initialize Project**
 
-    Flake FHS provides two initialization templates:
+   ```bash
+   nix flake init --template github:luochen1990/flake-fhs
+   ```
 
-    <Tabs>
-      <TabItem label="Pure Nix Project" icon="rocket">
-        Suitable as a **nixos-config** or **pure Nix package repository**.
+   It generates a `flake.nix` file, and you can continue to add standard directory structure like `pkgs/`, `hosts/`, `modules/`.
 
-        ```bash
-        nix flake init --template github:luochen1990/flake-fhs
-        ```
+2. **Add a Host**
 
-        It generates a `flake.nix` file, and you can continue to add standard directory structure like `pkgs/`, `hosts/`, `modules/`.
-      </TabItem>
+   Create file `hosts/laptop/configuration.nix`:
 
-      <TabItem label="Embed in Non-Nix Project" icon="puzzle">
-        Suitable for adding Nix support to **non-pure Nix projects** (such as Python, Node.js, Rust).
+   ```nix
+   { config, lib, pkgs, ... }:
+   {
+     # Note: This is only a partial config, a complete config also requires boot loader, filesystem, etc.
+     system.stateVersion = "26.05";
+   }
+   ```
 
-        ```bash
-        nix flake init --template github:luochen1990/flake-fhs#embed
-        ```
+   *No need to manually modify `flake.nix`, the framework will automatically discover it. Remember to `git add` new files, otherwise flake won't recognize them.*
 
-        It generates a `flake.nix` file and `nix/` directory, minimizing interference with the existing project structure. You can continue to add standard directory structure like `pkgs/`, `hosts/`, `modules/` under the `nix/` directory.
-      </TabItem>
-    </Tabs>
+3. **Add a Module**
 
-2.  **Add a Package**
+   Create file `modules/tweaks.nix`:
 
-    Create file `pkgs/hello.nix`:
+   ```nix
+   { config, lib, ... }:
+   {
+     options.tweaks.enable = lib.mkEnableOption "system tweaks";
 
-    ```nix
-    { writeShellScriptBin }:
-    writeShellScriptBin "hello" ''
-      echo "Hello, Flake FHS!"
-    ''
-    ```
+     config = lib.mkIf config.tweaks.enable {
+       # Enable flakes and nix-command
+       nix.settings.experimental-features = [ "nix-command" "flakes" ];
+       # Map Caps to Ctrl
+       services.xserver.xkb.options = "ctrl:nocaps";
+     };
+   }
+   ```
 
-    *No need to manually modify `flake.nix`, the framework will automatically discover it.*
+4. **Enable Module in Host**
 
-3.  **Build and Run**
+   Modify `hosts/laptop/configuration.nix`:
 
-    ```bash
-    nix build .#hello
-    nix run .#hello
-    ```
+   ```nix
+   { config, lib, pkgs, ... }:
+   {
+     # Note: This is only a partial config, a complete config also requires boot loader, filesystem, etc.
+     system.stateVersion = "26.05";
+
+     tweaks.enable = true;  # Enable custom module
+   }
+   ```
+
+   *The framework automatically imports all modules, no need to manually add imports.*
+
+5. **Build Verification**
+
+   ```bash
+   nixos-rebuild build --flake .#laptop
+   ```
 
 </Steps>
+
+  </TabItem>
+
+  <TabItem label="Embed in Non-Nix Project" icon="puzzle">
+
+Suitable for adding Nix support to **non-pure Nix projects** (such as Python, Node.js, Rust).
+
+<Steps>
+
+1. **Initialize Project**
+
+   ```bash
+   nix flake init --template github:luochen1990/flake-fhs#embed
+   ```
+
+   It generates a `flake.nix` file and `nix/` directory, minimizing interference with the existing project structure.
+
+2. **Add a Package**
+
+   Create file `nix/pkgs/weather.nix`:
+
+   ```nix
+   { writeShellScriptBin, curl }:
+   writeShellScriptBin "weather" ''
+     ${curl}/bin/curl -s wttr.in/?format=3
+   ''
+   ```
+
+   *No need to manually modify `flake.nix`, the framework will automatically discover it. Remember to `git add` new files, otherwise flake won't recognize them.*
+
+3. **Build and Run**
+
+   ```bash
+   nix build .#weather
+   nix run .#weather
+   ```
+
+</Steps>
+
+  </TabItem>
+</Tabs>
 
 <LinkCard title="📖 View Complete Directory Map" description="Contains all supported directories and their corresponding Nix command mappings." href="/en/directory-map" />

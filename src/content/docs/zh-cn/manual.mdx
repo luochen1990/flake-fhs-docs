@@ -7,54 +7,116 @@ import { LinkCard, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/com
 
 ## 1分钟入门 (Tutorial)
 
+<Tabs>
+  <TabItem label="纯 Nix 项目" icon="rocket">
+
+适用于作为 **nixos-config** 或**纯 Nix 软件包仓库**。
+
 <Steps>
 
-1.  **初始化项目**
+1. **初始化项目**
 
-    Flake FHS 提供两种初始化模板：
+   ```bash
+   nix flake init --template github:luochen1990/flake-fhs
+   ```
 
-    <Tabs>
-      <TabItem label="纯 Nix 项目" icon="rocket">
-        适用于作为 **nixos-config** 或**纯 Nix 软件包仓库**。
+   它会生成 `flake.nix` 文件，你可以继续添加 `pkgs/`, `hosts/`, `modules/` 等标准目录结构。
 
-        ```bash
-        nix flake init --template github:luochen1990/flake-fhs
-        ```
+2. **添加一个 Host**
 
-        它会生成 `flake.nix` 文件，你可以继续添加 `pkgs/`, `hosts/`, `modules/` 等标准目录结构。
-      </TabItem>
+   创建文件 `hosts/laptop/configuration.nix`：
 
-      <TabItem label="嵌入到非 Nix 项目" icon="puzzle">
-        适用于为**非纯 Nix 项目** (如 Python, Node.js, Rust) 添加 Nix 支持。
+   ```nix
+   { config, lib, pkgs, ... }:
+   {
+     # 注意：这只是配置的一部分，完整配置还需包含 boot loader、filesystem 等内容
+     system.stateVersion = "26.05";
+   }
+   ```
 
-        ```bash
-        nix flake init --template github:luochen1990/flake-fhs#embed
-        ```
+   *无需手动修改 `flake.nix`，框架会自动发现它。记得 `git add` 新文件，否则 flake 无法识别。*
 
-        它会生成 `flake.nix` 文件和 `nix/` 目录，尽可能不干扰现有的项目结构。你可以继续在 `nix/` 目录下添加 `pkgs/`, `hosts/`, `modules/` 等标准目录结构。
-      </TabItem>
-    </Tabs>
+3. **添加一个 Module**
 
-2.  **添加一个包**
+   创建文件 `modules/tweaks.nix`：
 
-    创建文件 `pkgs/hello.nix`：
+   ```nix
+   { config, lib, ... }:
+   {
+     options.tweaks.enable = lib.mkEnableOption "system tweaks";
 
-    ```nix
-    { writeShellScriptBin }:
-    writeShellScriptBin "hello" ''
-      echo "Hello, Flake FHS!"
-    ''
-    ```
+     config = lib.mkIf config.tweaks.enable {
+       # 启用 flakes 和 nix-command
+       nix.settings.experimental-features = [ "nix-command" "flakes" ];
+       # 将 Caps 映射为 Ctrl
+       services.xserver.xkb.options = "ctrl:nocaps";
+     };
+   }
+   ```
 
-    *无需手动修改 `flake.nix`，框架会自动发现它。*
+4. **在 Host 中启用 Module**
 
-3.  **构建与运行**
+   修改 `hosts/laptop/configuration.nix`：
 
-    ```bash
-    nix build .#hello
-    nix run .#hello
-    ```
+   ```nix
+   { config, lib, pkgs, ... }:
+   {
+     # 注意：这只是配置的一部分，完整配置还需包含 boot loader、filesystem 等内容
+     system.stateVersion = "26.05";
+
+     tweaks.enable = true;  # 启用自定义 module
+   }
+   ```
+
+   *框架会自动 import 所有 modules，无需手动添加 imports。*
+
+5. **构建验证**
+
+   ```bash
+   nixos-rebuild build --flake .#laptop
+   ```
 
 </Steps>
+
+  </TabItem>
+
+  <TabItem label="嵌入到非 Nix 项目" icon="puzzle">
+
+适用于为**非纯 Nix 项目** (如 Python, Node.js, Rust) 添加 Nix 支持。
+
+<Steps>
+
+1. **初始化项目**
+
+   ```bash
+   nix flake init --template github:luochen1990/flake-fhs#embed
+   ```
+
+   它会生成 `flake.nix` 文件和 `nix/` 目录，尽可能不干扰现有的项目结构。
+
+2. **添加一个包**
+
+   创建文件 `nix/pkgs/weather.nix`：
+
+   ```nix
+   { writeShellScriptBin, curl }:
+   writeShellScriptBin "weather" ''
+    ${curl}/bin/curl -s wttr.in/?format=3
+   ''
+   ```
+
+   *无需手动修改 `flake.nix`，框架会自动发现它。记得 `git add` 新文件，否则 flake 无法识别。*
+
+3. **构建与运行**
+
+   ```bash
+   nix build .#weather
+   nix run .#weather
+   ```
+
+</Steps>
+
+  </TabItem>
+</Tabs>
 
 <LinkCard title="📖 查看完整目录映射表 (Directory Map)" description="包含所有支持的目录及其对应的 Nix 命令对照。" href="/zh-cn/directory-map" />
