@@ -198,22 +198,6 @@ For scenarios requiring full control over import logic:
 }
 ```
 
-### Define a Traditional Module
-
-For scenarios requiring full control over import logic:
-
-```nix
-# modules/tweaks/default.nix
-{ config, lib, ... }:
-{
-  # Direct configuration, no auto-injected enable mechanism
-  environment.systemPackages = [ /* ... */ ];
-  
-  # Can explicitly import helper files in the same directory
-  imports = [ ./utils.nix ];
-}
-```
-
 ### Custom File Suffix
 
 By default, Guarded modules auto-discover and import `.nix` files (excluding `options.nix` and `scope.nix`). You can customize this suffix via `layout.nixosModules.suffix` to prevent helper files from being auto-imported:
