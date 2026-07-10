@@ -153,8 +153,8 @@ Take `modules/services/web-server` as an example:
 
 **1. `options.nix`: Define Interface**
 
-<Aside type="tip" title="Strict Mode">
-The framework requires explicitly defining the full option path (e.g., `options.services.web-server`), and checks if it matches the directory structure.
+<Aside type="tip" title="Option Namespace">
+By default, option namespaces are not enforced. If you want the framework to automatically validate that option paths match the directory structure, see Strict Options Validation in [Advanced Configuration](../advanced-config/#strict-options-validation).
 </Aside>
 
 <Aside type="tip" title="Auto Enable">
@@ -214,6 +214,37 @@ For scenarios requiring full control over import logic:
 }
 ```
 
+### Custom File Suffix
+
+By default, Guarded modules auto-discover and import `.nix` files (excluding `options.nix` and `scope.nix`). You can customize this suffix via `layout.nixosModules.suffix` to prevent helper files from being auto-imported:
+
+<FileTree>
+
+- modules/
+  - web-server/
+    - options.nix      <Badge text="Always Imported" variant="default" size="small" />
+    - config.mod.nix   <Badge text="✅ Matches suffix" variant="default" size="small" />
+    - setup.mod.nix    <Badge text="✅ Matches suffix" variant="default" size="small" />
+    - helper.nix       <Badge text="❌ No match" variant="default" size="small" />
+
+</FileTree>
+
+```nix
+{
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } {
+      layout.nixosModules = {
+        subdirs = [ "modules" ];
+        suffix = ".mod.nix";  # Only import files ending with .mod.nix
+      };
+    };
+}
+```
+
+<Aside type="note" title="When to Use">
+This is useful when you need to keep helper `.nix` files in module directories without having them auto-imported by the framework.
+</Aside>
+
 ### Nested Guarded Modules
 
 Guarded modules support nesting. Child modules check **ALL parent enables**:
@@ -235,6 +266,35 @@ Generated `mkIf` conditions:
 - `network/config.nix`: `lib.mkIf config.network.enable { ... }`
 - `network/services/web/config.nix`: `lib.mkIf (config.network.enable && config.network.services.web.enable) { ... }`
 
+## Output Structure
+
+### Individual Module Outputs
+
+Each module generates a `nixosModules.<path>` output:
+
+| Directory | Output |
+| :--- | :--- |
+| `modules/web-server/` | `nixosModules.services.web-server` |
+| `modules/utils.nix` | `nixosModules.utils` |
+
+### Default Module
+
+`nixosModules.default` includes **ALL** modules:
+
+- All Guarded modules (with enable guards)
+- All Traditional modules (directly active)
+- All Single File modules (directly active)
+
+```nix
+{
+  # Import all modules at once
+  imports = [ flake.nixosModules.default ];
+
+  # Enable Guarded modules as needed
+  services.web-server.enable = true;
+}
+```
+
 ## Design Decisions
 
 <Aside type="note" title="Why Don't Traditional Modules Support Nesting?">
@@ -244,4 +304,12 @@ Traditional modules are designed to be compatible with traditional Nix directory
 - **Guarded = Nestable**: Supports hierarchical enable control
 
 Use Guarded modules if you need nesting structures.
+</Aside>
+
+<Aside type="note" title="Why Can't options.nix and default.nix Coexist?">
+These two files represent different module types (Guarded vs Traditional). Having both makes it impossible for the framework to determine the module type, creating ambiguity. This follows the **mutually exclusive types** design principle: each directory structure corresponds to exactly one module type, avoiding implicit behavior.
+</Aside>
+
+<Aside type="note" title="What Does nixosModules.default Include?">
+All modules (Guarded + Traditional + Single File), following the **Zero-boilerplate** principle. Users only need `imports = [ flake.nixosModules.default ]` to import everything, then enable Guarded modules as needed.
 </Aside>

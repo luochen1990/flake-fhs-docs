@@ -131,30 +131,14 @@ modules/myapp/
 }
 ```
 
-### 定义 Traditional 模块
-
-适用于需要完全控制导入逻辑的场景：
-
-```nix
-# modules/tweaks/default.nix
-{ config, lib, ... }:
-{
-  # 直接定义配置，无 enable 自动注入机制
-  environment.systemPackages = [ /* ... */ ];
-  
-  # 可以显式导入同目录下的辅助文件
-  imports = [ ./utils.nix ];
-}
-```
-
 ### 定义 Guarded 模块
 
 以 `modules/services/web-server` 为例：
 
 **1. `options.nix`: 定义接口**
 
-<Aside type="tip" title="严格模式">
-框架要求显式定义完整的选项路径（例如 `options.services.web-server`），并会检查其是否匹配目录结构。
+<Aside type="tip" title="选项命名空间">
+默认情况下，选项的命名空间不受强制约束。如果希望框架自动校验选项路径与目录结构是否匹配，请参阅 [高级配置](../advanced-config/#strict-options-validation) 中的 Strict Options Validation。
 </Aside>
 
 <Aside type="tip" title="自动 Enable">
@@ -214,6 +198,53 @@ in
 }
 ```
 
+### 定义 Traditional 模块
+
+适用于需要完全控制导入逻辑的场景：
+
+```nix
+# modules/tweaks/default.nix
+{ config, lib, ... }:
+{
+  # 直接定义配置，无 enable 自动注入机制
+  environment.systemPackages = [ /* ... */ ];
+  
+  # 可以显式导入同目录下的辅助文件
+  imports = [ ./utils.nix ];
+}
+```
+
+### 自定义文件后缀
+
+默认情况下，Guarded 模块会自动发现并导入 `.nix` 文件（排除 `options.nix` 和 `scope.nix`）。你可以通过 `layout.nixosModules.suffix` 自定义后缀，使辅助文件不会被自动导入：
+
+<FileTree>
+
+- modules/
+  - web-server/
+    - options.nix      <Badge text="总是导入" variant="default" size="small" />
+    - config.mod.nix   <Badge text="✅ 匹配后缀" variant="default" size="small" />
+    - setup.mod.nix    <Badge text="✅ 匹配后缀" variant="default" size="small" />
+    - helper.nix       <Badge text="❌ 不匹配" variant="default" size="small" />
+
+</FileTree>
+
+```nix
+{
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } {
+      layout.nixosModules = {
+        subdirs = [ "modules" ];
+        suffix = ".mod.nix";  # 仅导入 .mod.nix 结尾的文件
+      };
+    };
+}
+```
+
+<Aside type="note" title="适用场景">
+当你需要在模块目录中保留一些辅助 `.nix` 文件，但不想让它们被框架自动导入时，此功能非常有用。
+</Aside>
+
 ### 嵌套 Guarded 模块
 
 Guarded 模块支持嵌套，子模块会检查**所有父级的 enable**：
@@ -235,6 +266,35 @@ Guarded 模块支持嵌套，子模块会检查**所有父级的 enable**：
 - `network/config.nix`: `lib.mkIf config.network.enable { ... }`
 - `network/services/web/config.nix`: `lib.mkIf (config.network.enable && config.network.services.web.enable) { ... }`
 
+## 输出结构
+
+### 单个模块输出
+
+每个模块生成一个 `nixosModules.<path>` 输出：
+
+| 目录 | 输出 |
+| :--- | :--- |
+| `modules/web-server/` | `nixosModules.services.web-server` |
+| `modules/utils.nix` | `nixosModules.utils` |
+
+### 默认模块
+
+`nixosModules.default` 包含**所有**模块：
+
+- 所有 Guarded 模块（包含 enable 守卫）
+- 所有 Traditional 模块（直接生效）
+- 所有 Single File 模块（直接生效）
+
+```nix
+{
+  # 一次性导入所有模块
+  imports = [ flake.nixosModules.default ];
+
+  # 根据需要启用 Guarded 模块
+  services.web-server.enable = true;
+}
+```
+
 ## 设计决策
 
 <Aside type="note" title="为什么 Traditional 模块不支持嵌套？">
@@ -244,4 +304,12 @@ Traditional 模块被设计为兼容传统的 Nix 目录模块，由用户手动
 - **Guarded = 可嵌套的**：支持层级化的 enable 控制
 
 如果需要嵌套结构，请使用 Guarded 模块。
+</Aside>
+
+<Aside type="note" title="为什么 options.nix 和 default.nix 不能共存？">
+二者代表两种不同的模块类型（Guarded vs Traditional），同时存在会让框架无法确定模块类型，产生歧义。这遵循**互斥类型**的设计原则：每种目录结构对应且仅对应一种模块类型，避免隐式行为。
+</Aside>
+
+<Aside type="note" title="nixosModules.default 包含什么？">
+所有模块（Guarded + Traditional + Single File），遵循 **零样板 (Zero-boilerplate)** 原则。用户只需 `imports = [ flake.nixosModules.default ]` 即可导入全部模块，然后按需启用 Guarded 模块的 `enable`。
 </Aside>
