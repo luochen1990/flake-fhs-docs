@@ -120,7 +120,7 @@ In `hosts/my-machine/configuration.nix`:
 The simplest module form, just write configuration directly:
 
 ```nix
-// modules/personal/config.nix
+# modules/personal/config.nix
 { config, lib, ... }:
 {
   # Direct configuration, no auto-injected enable mechanism
@@ -128,22 +128,6 @@ The simplest module form, just write configuration directly:
     isNormalUser = true;
     extraGroups = [ "wheel" ];
   };
-}
-```
-
-### Define a Traditional Module
-
-For scenarios requiring full control over import logic:
-
-```nix
-// modules/tweaks/default.nix
-{ config, lib, ... }:
-{
-  # Direct configuration, no auto-injected enable mechanism
-  environment.systemPackages = [ /* ... */ ];
-  
-  # Can explicitly import helper files in the same directory
-  imports = [ ./utils.nix ];
 }
 ```
 
@@ -203,7 +187,23 @@ in
 For scenarios requiring full control over import logic:
 
 ```nix
-// modules/tweaks/default.nix
+# modules/tweaks/default.nix
+{ config, lib, ... }:
+{
+  # Direct configuration, no auto-injected enable mechanism
+  environment.systemPackages = [ /* ... */ ];
+  
+  # Can explicitly import helper files in the same directory
+  imports = [ ./utils.nix ];
+}
+```
+
+### Define a Traditional Module
+
+For scenarios requiring full control over import logic:
+
+```nix
+# modules/tweaks/default.nix
 { config, lib, ... }:
 {
   # Direct configuration, no auto-injected enable mechanism

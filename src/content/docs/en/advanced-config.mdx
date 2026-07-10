@@ -9,20 +9,33 @@ This chapter introduces the `mkFlake` global configuration in `flake.nix` and se
 
 ## mkFlake Configuration
 
-The `mkFlake` function accepts two arguments: context (`inputs`, `self`, etc.) and configuration module.
+The `mkFlake` function is the entry point of the framework. It accepts two arguments: context (`inputs`, `self`, etc.) and configuration module.
+
+A typical `flake.nix` configuration looks like this:
 
 ```nix
-flake-fhs.lib.mkFlake { inherit inputs; } {
-  # 1. Set supported systems
-  systems = [ "x86_64-linux" "aarch64-darwin" ];
-
-  # 2. Configure nixpkgs instance
-  nixpkgs.config = {
-    allowUnfree = true;
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-fhs.url = "github:luochen1990/flake-fhs";
   };
-  
-  # 3. Custom directory layout (optional)
-  # layout.packages.subdirs = [ "pkgs" "my-packages" ];
+
+  outputs = inputs@{ flake-fhs, ... }:
+    flake-fhs.lib.mkFlake { inherit inputs; } {
+      # 1. Set supported systems (optional)
+      systems = [ "x86_64-linux" "aarch64-darwin" ];
+
+      # 2. Configure nixpkgs instance (optional)
+      nixpkgs.config = {
+        allowUnfree = true;
+      };
+      
+      # 3. flake-parts-like flake options (optional)
+      # For adding non-standard flake outputs or manual extension
+      flake = {
+        # overlays.default = ...
+      };
+    };
 }
 ```
 

@@ -101,7 +101,7 @@ Suitable for adding Nix support to **non-pure Nix projects** (such as Python, No
    ```nix
    { writeShellScriptBin, curl }:
    writeShellScriptBin "weather" ''
-     ${curl}/bin/curl -s wttr.in/?format=3
+    ${curl}/bin/curl -s wttr.in/?format=3
    ''
    ```
 
