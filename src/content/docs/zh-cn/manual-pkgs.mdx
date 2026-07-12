@@ -19,9 +19,9 @@ Flake FHS 支持两种包定义形式：
 
 <FileTree>
 - pkgs/
-  - weather/             <Badge text="子目录包 (推荐)" variant="default" size="small" />
+  - greet/               <Badge text="子目录包 (推荐)" variant="default" size="small" />
     - package.nix        <Badge text="入口文件" variant="default" size="small" />
-    - helper.nix         <Badge text="辅助文件 (不会被扫描为独立包)" variant="default" size="small" />
+    - banner.nix         <Badge text="辅助文件 (不会被扫描为独立包)" variant="default" size="small" />
   - hello.nix            <Badge text="单文件包 (仅适合 trivial 包)" variant="default" size="small" />
 </FileTree>
 
@@ -32,42 +32,39 @@ Flake FHS 支持两种包定义形式：
 
 在 Flake FHS 中，软件包定义完全遵循 **Nixpkgs 标准规范**。它就是一个标准的 Nix 函数（通常称为 `callPackage` 模式），接收依赖项作为参数，并返回一个 Derivation。这种标准化的设计意味着你可以轻松地将代码贡献给上游 nixpkgs。
 
-**示例：定义一个真实的软件包**
+**示例：子目录包（带辅助文件）**
 
-`pkgs/editorconfig-core-c/package.nix`:
+下面演示 `greet` 包：入口 `package.nix` 通过 `import` 引用同目录的 `banner.nix` 来获取 ASCII banner 文本，直观展示了子目录包"容纳辅助文件"的核心价值。
+
+`pkgs/greet/banner.nix` — 辅助文件，生成 banner 文本：
 
 ```nix
-{ stdenv, fetchFromGitHub, lib }:
-
-stdenv.mkDerivation rec {
-  pname = "editorconfig-core-c";
-  version = "2.12.1";
-
-  src = fetchFromGitHub {
-    owner = "editorconfig";
-    repo = "editorconfig-core-c";
-    rev = "v${version}";
-    sha256 = "0znh7c2j0... (hash)";
-  };
-
-  installPhase = ''
-    mkdir -p $out/bin
-    cp editorconfig $out/bin/
-  '';
-
-  meta = with lib; {
-    description = "EditorConfig core library written in C";
-    homepage = "https://editorconfig.org/";
-    license = licenses.bsd2;
-  };
-}
+{ text }: ''
+  ╔════════════════════╗
+  ║  ${text}
+  ╚════════════════════╝
+''
 ```
+
+`pkgs/greet/package.nix` — 入口文件：
+
+```nix
+{ writeShellScriptBin }:
+let banner = import ./banner.nix { text = "Welcome!"; };
+in writeShellScriptBin "greet" ''
+  echo '${banner}'
+''
+```
+
+<Aside type="note" title="为什么 banner.nix 不会变成独立包？">
+虽然 `banner.nix` 也是 `.nix` 文件，但因为它不叫 `package.nix`，框架**不会**把它当作独立包扫描——这正是子目录包封装价值的体现。辅助文件同样可以是补丁（`.patch`）、源码、构建脚本等，都不会影响包的对外接口。
+</Aside>
 
 ### 自动依赖注入
 
-注意上面的例子中，函数参数 `{ stdenv, fetchFromGitHub, lib }` 并没有显式导入。
+注意上面的例子中，函数参数 `{ writeShellScriptBin }` 并没有显式导入。
 
-这是因为 Flake FHS 会自动从 `nixpkgs` 中查找并注入这些依赖。你只需要声明你需要的包名即可。
+这是因为 Flake FHS 会自动从 `nixpkgs` 中查找并注入这些依赖。你只需要声明你需要的包名即可（如 `stdenv`、`fetchFromGitHub`、`lib` 等，对 `stdenv.mkDerivation` 等真实构建同样适用）。
 
 <Aside type="tip">
 这种机制称为 `callPackage`。它是 Nix 生态中最核心的依赖管理模式。
