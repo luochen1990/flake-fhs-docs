@@ -54,6 +54,7 @@
 - **真实 (Real)**: 存在真实场景，而不是瞎编乱造 (比如 pkgs.wget 优于 pkgs.foo)。
 - **典型 (Typical)**: 具备代表性 (大部分时候真的是这么用的)，而不过分 trivial (比如 `{ stdenv }: stdenv.mkDerivation { ... }` 优于 `{ pkgs }: pkgs.hello`)。
 - **小巧 (Compact)**: 体积小，不过分 complex (在能满足真实和典型的前提下,示例能做到越小越好)。
+- **一致 (Consistent)**: 示例的风格必须与项目推荐风格保持一致，避免在不同页面随意混用不同形式。对于软件包 (`pkgs/`)，**默认使用子目录包 `<name>/package.nix`**（与 nixpkgs [`by-name`](https://github.com/NixOS/rfcs/pull/140) 约定兼容，便于贡献上游）；仅对 trivial 脚本包（如一行 `writeShellScriptBin`）使用单文件包 `<name>.nix`。
 
 ### 4.2 内容编排原则
 
@@ -67,8 +68,8 @@
 
 文档中涉及到 Flake 模块结构时，应统一使用以下术语：
 
-- **单文件包 (Single-file Package)**: 例如 `pkgs/hello.nix`。
-- **子目录包 (Subdirectory Package)**: 例如 `pkgs/hello/package.nix`。
+- **单文件包 (Single-file Package)**: 例如 `pkgs/hello.nix`。（仅适合 trivial 脚本包）
+- **子目录包 (Subdirectory Package)**: 例如 `pkgs/hello/package.nix`。（**推荐默认**，兼容 nixpkgs by-name）
 - **单文件模块 (Single-file Module)**: 例如 `modules/nixos.nix`。
 - **子目录模块 (Subdirectory Module)**: 例如 `modules/nixos/options.nix`。
 - **包域 (Scope)**: 例如 `pkgs/python/scope.nix`。
