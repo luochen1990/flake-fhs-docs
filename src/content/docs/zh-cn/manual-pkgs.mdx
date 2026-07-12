@@ -19,10 +19,10 @@ Flake FHS 支持两种包定义形式：
 
 <FileTree>
 - pkgs/
-  - hello/               <Badge text="子目录包 (推荐)" variant="default" size="small" />
+  - weather/             <Badge text="子目录包 (推荐)" variant="default" size="small" />
     - package.nix        <Badge text="入口文件" variant="default" size="small" />
-    - src/               <Badge text="辅助文件 (补丁、源码等)" variant="default" size="small" />
-  - weather.nix          <Badge text="单文件包 (仅适合 trivial 包)" variant="default" size="small" />
+    - helper.nix         <Badge text="辅助文件 (不会被扫描为独立包)" variant="default" size="small" />
+  - hello.nix            <Badge text="单文件包 (仅适合 trivial 包)" variant="default" size="small" />
 </FileTree>
 
 - **子目录包 `<name>/package.nix`**（推荐）：与 nixpkgs [`by-name`](https://github.com/NixOS/rfcs/pull/140) 约定兼容，便于将包直接贡献给上游 nixpkgs。目录下的其他文件（如辅助函数、补丁）不会被当作独立包扫描，天然支持多文件包。
@@ -34,13 +34,13 @@ Flake FHS 支持两种包定义形式：
 
 **示例：定义一个真实的软件包**
 
-`pkgs/hello/package.nix`:
+`pkgs/editorconfig-core-c/package.nix`:
 
 ```nix
 { stdenv, fetchFromGitHub, lib }:
 
 stdenv.mkDerivation rec {
-  pname = "hello";
+  pname = "editorconfig-core-c";
   version = "2.12.1";
 
   src = fetchFromGitHub {
