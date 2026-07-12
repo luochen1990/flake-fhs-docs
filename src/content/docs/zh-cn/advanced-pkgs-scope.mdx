@@ -95,12 +95,12 @@ stdenv.mkDerivation {
 { pkgs, ... }:
 {
   # 替换模式：将 Base Scope 切换为 Python 3.11 包集
-  # 下级文件中的 callPackage 将从 python311Packages 中查找依赖
+  # 同级及下级文件中的 callPackage 将从 python311Packages 中查找依赖
   scope = pkgs.python311Packages;
 }
 ```
 
-`pkgs/my-tool/app.nix`:
+`pkgs/my-tool/package.nix`:
 ```nix
 # 这里可以直接请求 buildPythonApplication 以及 pandas, requests 等 Python 库
 # 而不需要写 python3Packages.pandas

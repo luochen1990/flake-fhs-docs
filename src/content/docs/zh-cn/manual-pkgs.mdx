@@ -15,23 +15,26 @@ Flake FHS 的 **Scoped Package Tree** 模型将 `pkgs/` 目录直接映射为 `p
 
 ### 目录结构
 
-你可以直接在 `pkgs/` 下创建 `.nix` 文件 (单文件包)，或者创建一个包含 `package.nix` 的子目录 (子目录包)。
+Flake FHS 支持两种包定义形式：
 
 <FileTree>
 - pkgs/
-  - hello.nix            <Badge text="单文件包 (顶层 .nix 文件)" variant="default" size="small" />
-  - complex-app/         <Badge text="子目录包" variant="default" size="small" />
+  - hello/               <Badge text="子目录包 (推荐)" variant="default" size="small" />
     - package.nix        <Badge text="入口文件" variant="default" size="small" />
-    - src/               <Badge text="辅助文件" variant="default" size="small" />
+    - src/               <Badge text="辅助文件 (补丁、源码等)" variant="default" size="small" />
+  - weather.nix          <Badge text="单文件包 (仅适合 trivial 包)" variant="default" size="small" />
 </FileTree>
+
+- **子目录包 `<name>/package.nix`**（推荐）：与 nixpkgs [`by-name`](https://github.com/NixOS/rfcs/pull/140) 约定兼容，便于将包直接贡献给上游 nixpkgs。目录下的其他文件（如辅助函数、补丁）不会被当作独立包扫描，天然支持多文件包。
+- **单文件包 `<name>.nix`**：仅适合不需要辅助文件的 trivial 包（如一行 `writeShellScriptBin` 的脚本包）。
 
 ### 编写软件包
 
 在 Flake FHS 中，软件包定义完全遵循 **Nixpkgs 标准规范**。它就是一个标准的 Nix 函数（通常称为 `callPackage` 模式），接收依赖项作为参数，并返回一个 Derivation。这种标准化的设计意味着你可以轻松地将代码贡献给上游 nixpkgs。
 
-**示例：定义一个简单的 Hello World 包**
+**示例：定义一个真实的软件包**
 
-`pkgs/hello.nix`:
+`pkgs/hello/package.nix`:
 
 ```nix
 { stdenv, fetchFromGitHub, lib }:

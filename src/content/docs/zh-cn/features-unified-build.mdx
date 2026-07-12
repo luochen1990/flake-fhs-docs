@@ -21,7 +21,8 @@ Flake FHS 提供了统一的 `package.nix` 模式，所有类型的输出都使�
 
 ```
 pkgs/
-  hello.nix            # package 输出
+  hello/
+    package.nix        # package 输出
 apps/
   greeting/
     package.nix        # app 输出
@@ -35,7 +36,7 @@ checks/
 所有类型都使用相同的函数签名模式：
 
 ```nix
-# pkgs/hello.nix - 普通软件包
+# pkgs/hello/package.nix - 普通软件包
 { writeShellScriptBin }:
 writeShellScriptBin "hello" ''
   echo "Hello!"

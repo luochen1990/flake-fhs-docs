@@ -39,7 +39,12 @@ import { Card, CardGrid, LinkCard, FileTree, Badge } from '@astrojs/starlight/co
     <details>
       <summary style={{ cursor: 'pointer' }}>📂 pkgs/</summary>
       <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
-        <li>📄 ripgrep.nix <Badge text="packages.<system>.ripgrep" variant="default" size="small" /></li>
+        <li>
+          📂 ripgrep/
+          <ul style={{ listStyleType: 'none', paddingLeft: '1.5em', marginTop: '0.25rem' }}>
+            <li>📄 package.nix <Badge text="packages.<system>.ripgrep" variant="default" size="small" /></li>
+          </ul>
+        </li>
       </ul>
     </details>
   </li>
