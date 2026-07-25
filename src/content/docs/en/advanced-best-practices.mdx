@@ -13,8 +13,8 @@ The following are recommended practices for using Flake FHS. Following these pri
 *   **Modularization**
     Split complex system configurations into small, reusable modules (`modules/`). Avoid piling up all configurations in a huge `configuration.nix`.
 
-*   **Encapsulation**
-    If a package requires multiple helper files, please use **subdirectory packages** (i.e., create `pkgs/<name>/package.nix`). Other `.nix` files (such as `helper.nix`) under that directory will not be automatically scanned as independent packages, thus keeping the external interface clean.
+*   **Prefer Subdirectory Packages**
+    It is recommended to use **subdirectory packages** (i.e., `pkgs/<name>/package.nix`), which is compatible with the nixpkgs `by-name` convention and makes it easier to contribute upstream. Other `.nix` files (such as `helper.nix`) under that directory will not be automatically scanned as independent packages, naturally supporting multi-file packages while keeping the external interface clean. Only trivial single-file script packages should use `pkgs/<name>.nix`.
 
 ## Development Workflow
 

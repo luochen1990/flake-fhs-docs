@@ -15,56 +15,56 @@ The `pkgs/` directory is used to store the project's own package definitions.
 
 ### Directory Structure
 
-You can create a `.nix` file directly under `pkgs/` (single-file package), or create a subdirectory containing `package.nix` (subdirectory package).
+Flake FHS supports two package definition forms:
 
 <FileTree>
 - pkgs/
-  - hello.nix            <Badge text="Single-file Package (Top-level .nix file)" variant="default" size="small" />
-  - complex-app/         <Badge text="Subdirectory Package" variant="default" size="small" />
+  - greet/               <Badge text="Subdirectory Package (Recommended)" variant="default" size="small" />
     - package.nix        <Badge text="Entry File" variant="default" size="small" />
-    - src/               <Badge text="Helper Files" variant="default" size="small" />
+    - banner.nix         <Badge text="Helper File (not scanned as a separate package)" variant="default" size="small" />
+  - hello.nix            <Badge text="Single-file Package (only for trivial packages)" variant="default" size="small" />
 </FileTree>
+
+- **Subdirectory package `<name>/package.nix`** (recommended): Compatible with the nixpkgs [`by-name`](https://github.com/NixOS/rfcs/pull/140) convention, making it easy to contribute packages directly to upstream nixpkgs. Other files in the directory (such as helper functions or patches) are not scanned as separate packages, natively supporting multi-file packages.
+- **Single-file package `<name>.nix`**: Only suitable for trivial packages that do not need helper files (e.g., a one-line `writeShellScriptBin` script package).
 
 ### Writing Packages
 
-In Flake FHS, package definitions fully follow the **Nixpkgs Standard Specification**. It is a standard Nix function (usually called `callPackage` pattern) that receives dependencies as arguments and returns a Derivation. This standardized design means you can easily contribute code to upstream nixpkgs.
+In Flake FHS, package definitions fully follow the **Nixpkgs Standard Specification**. It is a standard Nix function (usually called the `callPackage` pattern) that receives dependencies as arguments and returns a Derivation. This standardized design means you can easily contribute code to upstream nixpkgs.
 
-**Example: Define a simple Hello World package**
+**Example: Subdirectory package (with helper file)**
 
-`pkgs/hello.nix`:
+The following demonstrates the `greet` package: the entry `package.nix` imports `banner.nix` from the same directory to obtain the ASCII banner text, directly illustrating the core value of subdirectory packages—"containing helper files".
+
+`pkgs/greet/banner.nix` — helper file that generates the banner text:
 
 ```nix
-{ stdenv, fetchFromGitHub, lib }:
-
-stdenv.mkDerivation rec {
-  pname = "hello";
-  version = "2.12.1";
-
-  src = fetchFromGitHub {
-    owner = "editorconfig";
-    repo = "editorconfig-core-c";
-    rev = "v${version}";
-    sha256 = "0znh7c2j0... (hash)";
-  };
-
-  installPhase = ''
-    mkdir -p $out/bin
-    cp editorconfig $out/bin/
-  '';
-
-  meta = with lib; {
-    description = "EditorConfig core library written in C";
-    homepage = "https://editorconfig.org/";
-    license = licenses.bsd2;
-  };
-}
+{ text }: ''
+  ╔════════════════════╗
+  ║  ${text}
+  ╚════════════════════╝
+''
 ```
+
+`pkgs/greet/package.nix` — entry file:
+
+```nix
+{ writeShellScriptBin }:
+let banner = import ./banner.nix { text = "Welcome!"; };
+in writeShellScriptBin "greet" ''
+  echo '${banner}'
+''
+```
+
+<Aside type="note" title="Why doesn't banner.nix become a separate package?">
+Although `banner.nix` is also a `.nix` file, because it is not named `package.nix`, the framework **does not** scan it as a separate package—this is exactly where the encapsulation value of subdirectory packages lies. Helper files can also be patches (`.patch`), source code, build scripts, etc., none of which will affect the package's external interface.
+</Aside>
 
 ### Automatic Dependency Injection
 
-Note that in the example above, the function arguments `{ stdenv, fetchFromGitHub, lib }` are not explicitly imported.
+Note that in the example above, the function argument `{ writeShellScriptBin }` is not explicitly imported.
 
-This is because Flake FHS automatically looks up and injects these dependencies from `nixpkgs`. You only need to declare the package names you need.
+This is because Flake FHS automatically looks up and injects these dependencies from `nixpkgs`. You only need to declare the package names you need (e.g., `stdenv`, `fetchFromGitHub`, `lib`, etc., which also apply to real builds like `stdenv.mkDerivation`).
 
 <Aside type="tip">
 This mechanism is called `callPackage`. It is the core dependency management pattern in the Nix ecosystem.

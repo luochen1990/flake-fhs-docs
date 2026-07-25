@@ -21,7 +21,8 @@ Flake FHS provides a unified `package.nix` pattern where all output types use th
 
 ```
 pkgs/
-  hello.nix            # package output
+  hello/
+    package.nix        # package output
 apps/
   greeting/
     package.nix        # app output
@@ -35,7 +36,7 @@ checks/
 All types use the same function signature pattern:
 
 ```nix
-# pkgs/hello.nix - regular package
+# pkgs/hello/package.nix - regular package
 { writeShellScriptBin }:
 writeShellScriptBin "hello" ''
   echo "Hello!"
