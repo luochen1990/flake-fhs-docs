@@ -1,0 +1,59 @@
+---
+title: Release Notes
+description: Change notes and migration guides for each version
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This page summarizes breaking changes and migration guides for each version. New users can skip it and go directly to the [Core Guides](../manual-modules/).
+
+## Unreleased
+
+### Module System Redesign
+
+Refactored the three mutually exclusive module types (Guarded / Traditional / Single File) into a unified model based on `default.nix`.
+
+#### Key Differences
+
+| Dimension | Old Design | New Design |
+| :--- | :--- | :--- |
+| Module types | 3 mutually exclusive (Guarded / Traditional / Single File) | Unified model (directory modules + single-file modules) |
+| Module entry | `options.nix` / `default.nix` / `.nix` (mutually exclusive signals) | `default.nix` (single entry) |
+| Enable injection | Only when `options.nix` present | All directory modules unconditionally |
+| Guarded config | `options.nix` + other `.nix` files | `.cfg.nix` suffix (configurable via `guardedSuffix`) |
+| Single-file module detection | `suffix` configurable | `.nix` hardcoded; must be outside directory module subtrees |
+| Conflict rule | `options.nix` and `default.nix` cannot coexist | No conflict (`options.nix` is no longer a signal file) |
+
+#### Migration Steps
+
+**1. Guarded modules (with `options.nix` + `config.nix`) → directory module + `.cfg.nix`**
+
+```
+# Before:
+modules/web-server/
+├── options.nix   # defines options
+└── config.nix    # guarded config
+
+# After:
+modules/web-server/
+├── default.nix       # content = old options.nix
+└── config.cfg.nix    # content = old config.nix (remove manual mkIf)
+```
+
+Steps:
+- Rename `options.nix` to `default.nix`
+- Rename config files (and other guarded config files) with `.cfg.nix` suffix (e.g., `config.nix` → `config.cfg.nix`)
+- Remove any manual `config = lib.mkIf cfg.enable { ... }` wrappers in config files (the framework auto-wraps)
+- If you have non-guarded helper `.nix` files (e.g., `utils.nix`), they are no longer auto-imported — either manually `imports = [ ./utils.nix ]` in `default.nix`, or add the `.cfg.nix` suffix to them
+
+**2. Traditional modules (with `default.nix`, no `options.nix`) → no changes needed**
+
+Old Traditional modules automatically become directory modules in the new design, with identical behavior. The only new phenomenon: all directory modules now get an `enable` option injected (even without `.cfg.nix`). This extra option is harmless and does not affect existing behavior.
+
+**3. Single File modules → essentially no changes needed**
+
+Standalone `.nix` files remain single-file modules in the new design. The only caveat: if located inside a directory module's subtree (also managed by that module in the old design), ensure the enclosing module's `default.nix` explicitly imports it.
+
+**4. Custom suffix configuration → remove**
+
+The `layout.nixosModules.suffix` option has been removed (single-file module suffix is hardcoded to `.nix`). If you previously configured a custom suffix, remove that configuration. To customize the guarded config file suffix, use `layout.nixosModules.guardedSuffix` instead.

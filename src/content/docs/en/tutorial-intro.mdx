@@ -124,7 +124,7 @@ Traditional NixOS module splitting requires:
 
 **Flake FHS Solution**:
 
-Put modules in the `modules/` directory for auto-discovery and registration. Combined with **Guarded Module**, the `enable` option and conditional logic are also auto-generated.
+Put modules in the `modules/` directory for auto-discovery and registration. Through `.cfg.nix` guarded config files, the `enable` conditional logic is auto-wrapped — no need to repeat `lib.mkIf` in every split file.
 
 ### Problem 4: Difficult Sub-Scope Package Management
 
@@ -247,28 +247,28 @@ Split configuration into multiple modules for separation of concerns.
 ```
 modules/
 ├── desktop/
-│   ├── options.nix
-│   └── config.nix
+│   ├── default.nix
+│   └── config.cfg.nix
 ├── network/
-│   ├── options.nix
-│   └── config.nix
+│   ├── default.nix
+│   └── config.cfg.nix
 └── services/
-    ├── options.nix
-    └── config.nix
+    ├── default.nix
+    └── config.cfg.nix
 ```
 
-**Fine-Grained Splitting**: Guarded Module auto-wraps, no boilerplate needed:
+**Fine-Grained Splitting**: `.cfg.nix` auto-wraps mkIf, no boilerplate needed:
 
 ```
 modules/
 └── my-website/
-    ├── options.nix    # Can be empty, enable option auto-generated
-    ├── nginx.nix      # Auto-wrapped with mkIf
-    └── redis.nix      # Auto-wrapped with mkIf
+    ├── default.nix       # Define options (enable auto-injected)
+    ├── nginx.cfg.nix     # Auto-wrapped with mkIf
+    └── redis.cfg.nix     # Auto-wrapped with mkIf
 ```
 
 ```nix
-// modules/my-website/nginx.nix
+// modules/my-website/nginx.cfg.nix
 { ... }:
 {
   // Automatically wrapped as: lib.mkIf config.my-website.enable { ... }
@@ -351,7 +351,7 @@ my-nixos/
 |------|----------|-----------|
 | Boilerplate Code | Repeatedly write `forAllSystems` etc. | Zero boilerplate |
 | Source Location | Need to read `flake.nix` | Directory = mapping, clear at a glance |
-| Module Splitting | Manually maintain imports + write `mkIf` in each file | Auto-discovery + Guarded Module |
+| Module Splitting | Manually maintain imports + write `mkIf` in each file | Auto-discovery + `.cfg.nix` auto-wrap |
 | Sub-Scope Packages | Manually call `python3Packages.callPackage` | Scoped Package Tree |
 | Project Standards | Each project has own conventions | Unified directory standard |
 | Adding Content | Modify `flake.nix` | Just create a file |

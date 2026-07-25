@@ -64,14 +64,14 @@ layout.packages.subdirs = [ "pkgs" "my-packages" ];
 | 选项 | 默认值 | 说明 |
 | :--- | :--- | :--- |
 | `layout.nixosModules.subdirs` | `[ "nixosModules" "modules" ]` | 扫描 NixOS 模块的目录列表 |
-| `layout.nixosModules.suffix` | `".nix"` | Guarded 模块自动导入配置文件的后缀。详见 [模块手册](../manual-modules/#自定义文件后缀) |
+| `layout.nixosModules.guardedSuffix` | `".cfg.nix"` | guarded 配置文件的后缀。详见 [模块手册](../manual-modules/#自定义后缀) |
 | `layout.nixosModules.strictOptions` | `false` | 是否启用 Strict Options Validation（详见下文） |
 
 ---
 
 ## Strict Options Validation
 
-默认情况下，框架**不强制**校验选项的命名空间。启用后，框架会检查每个 Guarded 模块的 `options.nix` 中定义的选项路径是否与目录结构匹配。
+默认情况下，框架**不强制**校验选项的命名空间。启用后，框架会检查每个目录模块的 `default.nix` 中定义的选项路径是否与目录结构匹配。
 
 ### 启用方式
 
@@ -86,10 +86,10 @@ layout.packages.subdirs = [ "pkgs" "my-packages" ];
 
 ### 校验规则
 
-启用后，每个 `options.nix` 中定义的选项必须在对应目录路径下：
+启用后，每个目录模块中定义的选项必须以其目录路径为前缀：
 
 ```nix
-# modules/foo/options.nix
+# modules/foo/default.nix
 { lib, ... }:
 {
   options.foo = {  # ✅ 匹配目录路径 foo
@@ -97,7 +97,7 @@ layout.packages.subdirs = [ "pkgs" "my-packages" ];
   };
 }
 
-# modules/foo/bar/options.nix
+# modules/foo/bar/default.nix
 { lib, ... }:
 {
   options.foo.bar = {  # ✅ 匹配目录路径 foo/bar
@@ -116,24 +116,20 @@ layout.packages.subdirs = [ "pkgs" "my-packages" ];
 
 本节解释模块系统背后的关键设计决策，帮助你理解框架的行为逻辑。
 
-### 三种互斥的模块类型
+### 模块入口约定
 
-框架将模块分为三种类型：**Single File**、**Traditional**、**Guarded**。它们是互斥的——每种目录结构对应且仅对应一种模块类型：
+框架只有一种模块入口约定：`default.nix`（目录模块）或独立 `.nix` 文件（单文件模块）。
 
-| 类型 | 识别标识 | Enable 机制 | 嵌套 |
+| 概念 | 识别标识 | Enable 机制 | 嵌套 |
 | :--- | :--- | :--- | :--- |
-| Single File | 独立 `.nix` 文件 | 无 | — |
-| Traditional | 目录含 `default.nix` | 无 | 不支持 |
-| Guarded | 目录含 `options.nix` | 自动生成 | 支持 |
+| 目录模块 | 目录含 `default.nix` | 无条件注入 | 支持（enable-chain） |
+| 单文件模块 | 独立 `.nix`（不在目录模块子树内） | 无 | — |
+| guarded 配置文件 | `.cfg.nix` 后缀 | `mkIf (enable-chain)` 包裹 | — |
 
 ### 关键设计决策
 
 <Aside type="note" title="为什么 nixosModules.default 包含所有模块？">
-遵循 **零样板 (Zero-boilerplate)** 原则。用户只需一行 `imports = [ flake.nixosModules.default ]` 即可导入全部模块，然后按需启用 Guarded 模块的 `enable`。这比按需手动导入更简单，且不需要额外的 partial loading 机制。
-</Aside>
-
-<Aside type="note" title="为什么 Traditional 模块不支持嵌套？">
-Traditional 模块被设计为**封装的 (encapsulated)**——它们自行管理 imports，与 nixpkgs 上游的 `default.nix` 约定一致。如果允许嵌套，会导致模块边界模糊（子目录的 `default.nix` 究竟是独立模块还是父模块的一部分？），增加理解负担。需要嵌套时应使用 Guarded 模块。
+遵循 **零样板 (Zero-boilerplate)** 原则。用户只需一行 `imports = [ flake.nixosModules.default ]` 即可导入全部模块，然后按需启用目录模块的 `enable`。这比按需手动导入更简单，且不需要额外的 partial loading 机制。
 </Aside>
 
 <Aside type="note" title="为什么不支持 Partial Loading？">

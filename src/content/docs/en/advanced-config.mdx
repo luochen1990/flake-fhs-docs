@@ -64,14 +64,14 @@ This means the framework will scan both `pkgs/` and `my-packages/` directories t
 | Option | Default | Description |
 | :--- | :--- | :--- |
 | `layout.nixosModules.subdirs` | `[ "nixosModules" "modules" ]` | List of directories to scan for NixOS modules |
-| `layout.nixosModules.suffix` | `".nix"` | File suffix for auto-imported config files in Guarded modules. See [Modules Guide](../manual-modules/#custom-file-suffix) |
+| `layout.nixosModules.guardedSuffix` | `".cfg.nix"` | File suffix for guarded config files. See [Modules Guide](../manual-modules/#custom-suffix) |
 | `layout.nixosModules.strictOptions` | `false` | Enable Strict Options Validation (see below) |
 
 ---
 
 ## Strict Options Validation
 
-By default, the framework **does not enforce** option namespace alignment. When enabled, the framework validates that each Guarded module's `options.nix` defines option paths matching its directory structure.
+By default, the framework **does not enforce** option namespace alignment. When enabled, the framework validates that each directory module's `default.nix` defines option paths matching its directory structure.
 
 ### Enabling
 
@@ -86,10 +86,10 @@ By default, the framework **does not enforce** option namespace alignment. When 
 
 ### Validation Rules
 
-When enabled, options defined in each `options.nix` must be under the corresponding directory path:
+When enabled, options defined in each directory module must be prefixed by their directory path:
 
 ```nix
-# modules/foo/options.nix
+# modules/foo/default.nix
 { lib, ... }:
 {
   options.foo = {  # ✅ Matches directory path foo
@@ -97,7 +97,7 @@ When enabled, options defined in each `options.nix` must be under the correspond
   };
 }
 
-# modules/foo/bar/options.nix
+# modules/foo/bar/default.nix
 { lib, ... }:
 {
   options.foo.bar = {  # ✅ Matches directory path foo/bar
@@ -116,24 +116,20 @@ When `strictOptions = true` and a namespace mismatch exists, it does **not** err
 
 This section explains the key design decisions behind the module system to help you understand the framework's behavior.
 
-### Three Mutually Exclusive Module Types
+### Module Entry Convention
 
-The framework classifies modules into three types: **Single File**, **Traditional**, and **Guarded**. They are mutually exclusive — each directory structure corresponds to exactly one module type:
+The framework has a single module entry convention: `default.nix` (directory module) or a standalone `.nix` file (single-file module).
 
-| Type | Identifier | Enable Mechanism | Nesting |
+| Concept | Identifier | Enable Mechanism | Nesting |
 | :--- | :--- | :--- | :--- |
-| Single File | Standalone `.nix` file | None | — |
-| Traditional | Directory with `default.nix` | None | Not supported |
-| Guarded | Directory with `options.nix` | Auto-generated | Supported |
+| Directory Module | Directory with `default.nix` | Unconditionally injected | Supported (enable-chain) |
+| Single File Module | Standalone `.nix` (outside directory module subtrees) | None | — |
+| Guarded Config File | `.cfg.nix` suffix | Wrapped with `mkIf (enable-chain)` | — |
 
 ### Key Design Decisions
 
 <Aside type="note" title="Why Does nixosModules.default Include All Modules?">
-Following the **Zero-boilerplate** principle. Users only need one line — `imports = [ flake.nixosModules.default ]` — to import all modules, then enable Guarded modules as needed. This is simpler than selective imports and requires no additional partial loading mechanism.
-</Aside>
-
-<Aside type="note" title="Why Don't Traditional Modules Support Nesting?">
-Traditional modules are designed to be **encapsulated** — they manage their own imports, consistent with the `default.nix` convention in nixpkgs upstream. Allowing nesting would create ambiguous module boundaries (is a subdirectory's `default.nix` an independent module or part of the parent?), increasing cognitive load. Use Guarded modules when nesting is needed.
+Following the **Zero-boilerplate** principle. Users only need one line — `imports = [ flake.nixosModules.default ]` — to import all modules, then enable directory modules as needed. This is simpler than selective imports and requires no additional partial loading mechanism.
 </Aside>
 
 <Aside type="note" title="Why No Partial Loading?">

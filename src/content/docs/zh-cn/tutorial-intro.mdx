@@ -124,7 +124,7 @@ writeShellScriptBin "hello" ''
 
 **Flake FHS 解决方案**：
 
-将模块放入 `modules/` 目录，自动发现并注册。结合 **Guarded Module** 特性，还可以自动生成 `enable` 选项并包装条件逻辑。
+将模块放入 `modules/` 目录，自动发现并注册。通过 `.cfg.nix` guarded 配置文件，可以自动包裹 `enable` 条件逻辑，避免每个拆分文件重复写 `lib.mkIf`。
 
 ### 问题四：子作用域包管理困难
 
@@ -247,28 +247,28 @@ shells/                # 开发环境
 ```
 modules/
 ├── desktop/
-│   ├── options.nix
-│   └── config.nix
+│   ├── default.nix
+│   └── config.cfg.nix
 ├── network/
-│   ├── options.nix
-│   └── config.nix
+│   ├── default.nix
+│   └── config.cfg.nix
 └── services/
-    ├── options.nix
-    └── config.nix
+    ├── default.nix
+    └── config.cfg.nix
 ```
 
-**细粒度拆分**：Guarded Module 自动包装，无需样板代码：
+**细粒度拆分**：`.cfg.nix` 自动包裹 mkIf，无需样板代码：
 
 ```
 modules/
 └── my-website/
-    ├── options.nix    # 可以留空，enable option 自动生成
-    ├── nginx.nix      # 自动包装 mkIf
-    └── redis.nix      # 自动包装 mkIf
+    ├── default.nix       # 定义 options（enable 自动注入）
+    ├── nginx.cfg.nix     # 自动包裹 mkIf
+    └── redis.cfg.nix     # 自动包裹 mkIf
 ```
 
 ```nix
-// modules/my-website/nginx.nix
+// modules/my-website/nginx.cfg.nix
 { ... }:
 {
   // 自动被包装成: lib.mkIf config.my-website.enable { ... }
@@ -351,7 +351,7 @@ my-nixos/
 |------|----------|-----------|
 | 样板代码 | 重复编写 `forAllSystems` 等 | 零样板代码 |
 | 源码定位 | 需要阅读 `flake.nix` | 目录即映射，一目了然 |
-| 模块拆分 | 手动维护 imports + 每个文件写 `mkIf` | 自动发现 + Guarded Module |
+| 模块拆分 | 手动维护 imports + 每个文件写 `mkIf` | 自动发现 + `.cfg.nix` 自动包裹 |
 | 子作用域包 | 手动调用 `python3Packages.callPackage` | Scoped Package Tree |
 | 项目规范 | 每个项目都有自己的约定 | 统一的目录标准 |
 | 新增内容 | 修改 `flake.nix` | 创建文件即可 |

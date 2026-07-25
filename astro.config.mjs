@@ -75,6 +75,7 @@ export default defineConfig({
 						{ slug: 'advanced-best-practices' },
 						{ slug: 'advanced-pkgs-scope' },
 						{ slug: 'advanced-config' },
+						{ slug: 'release-notes' },
 					],
 				},
 			],

@@ -1,0 +1,59 @@
+---
+title: Release Notes
+description: 各版本的变更说明与迁移指南
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+本页面汇总各版本的破坏性变更与迁移指南。新用户无需阅读，直接查看 [核心指南](../manual-modules/) 即可。
+
+## Unreleased
+
+### 模块系统重新设计
+
+将三类互斥模块模型（Guarded / Traditional / Single File）重构为基于 `default.nix` 的统一模型。
+
+#### 主要差异
+
+| 维度 | 旧设计 | 新设计 |
+| :--- | :--- | :--- |
+| 模块类型 | 3 类互斥（Guarded / Traditional / Single File） | 统一模型（目录模块 + 单文件模块） |
+| 模块入口 | `options.nix` / `default.nix` / `.nix`（互斥信号） | `default.nix`（唯一入口） |
+| enable 注入 | 仅当 `options.nix` 存在 | 所有目录模块无条件注入 |
+| guarded 配置 | `options.nix` + 其他 `.nix` 文件 | `.cfg.nix` 后缀（可配置 `guardedSuffix`） |
+| 单文件模块识别 | `suffix` 可配置 | `.nix` 硬编码；且必须在目录模块子树外 |
+| 冲突规则 | `options.nix` 与 `default.nix` 不能共存 | 无冲突（`options.nix` 不再是信号文件） |
+
+#### 迁移步骤
+
+**1. Guarded 模块（有 `options.nix` + `config.nix`）→ 目录模块 + `.cfg.nix`**
+
+```
+# 迁移前:
+modules/web-server/
+├── options.nix   # 定义 options
+└── config.nix    # guarded config
+
+# 迁移后:
+modules/web-server/
+├── default.nix       # 内容 = 旧 options.nix
+└── config.cfg.nix    # 内容 = 旧 config.nix（移除手写的 mkIf）
+```
+
+操作：
+- 将 `options.nix` 重命名为 `default.nix`
+- 将 `config.nix`（及其他 guarded 配置文件）重命名，加上 `.cfg.nix` 后缀（例如 `config.nix` → `config.cfg.nix`）
+- 移除配置文件中手写的 `config = lib.mkIf cfg.enable { ... }` 包裹（框架会自动包裹）
+- 如果你还有非 guarded 的辅助 `.nix` 文件（如 `utils.nix`），它们不再被自动 import——请在 `default.nix` 里手动 `imports = [ ./utils.nix ]`，或者也加上 `.cfg.nix` 后缀
+
+**2. Traditional 模块（有 `default.nix`，无 `options.nix`）→ 无需改动**
+
+旧的 Traditional 模块在新设计中自动成为目录模块，行为完全一致。唯一的新现象是：现在所有目录模块都会注入 `enable` 选项（即便没有 `.cfg.nix`）。这个额外 option 是无害的，不影响原有行为。
+
+**3. Single File 模块 → 基本无需改动**
+
+独立 `.nix` 文件在新设计中仍是单文件模块。唯一需要注意的变化：如果它位于某个目录模块的子树内（旧设计中也会被该模块管理），现在需要确保由该目录模块的 `default.nix` 显式 import。
+
+**4. 自定义 suffix 配置 → 移除**
+
+`layout.nixosModules.suffix` 配置项已移除（单文件模块后缀硬编码为 `.nix`）。如果你之前配置了自定义 suffix，请删除该配置。如需自定义 guarded 配置文件的后缀，改用 `layout.nixosModules.guardedSuffix`。
