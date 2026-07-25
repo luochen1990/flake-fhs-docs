@@ -7,26 +7,28 @@
         ]
       },
       "locked": {
-        "lastModified": 1770621792,
-        "narHash": "sha256-rdCTunOGXCJQjTbMrNKA259k+FK2GpNgutM+9gfwlpE=",
-        "owner": "luochen1990",
-        "repo": "flake-fhs",
-        "rev": "48d3ac5b8d46516d8adc0bd35b5287813a0c4f6c",
-        "type": "github"
+        "lastModified": 1784948645,
+        "narHash": "sha256-qsM8stwS3ZvLrzR8pX1TGJIkjQGrgvvymRHNMTY7BeE=",
+        "ref": "master",
+        "rev": "ff97730dd54c2b027b1c1c6f598c70d1ad10e6db",
+        "shallow": true,
+        "type": "git",
+        "url": "file:/home/lc/ws/flake-fhs"
       },
       "original": {
-        "owner": "luochen1990",
-        "repo": "flake-fhs",
-        "type": "github"
+        "ref": "master",
+        "shallow": true,
+        "type": "git",
+        "url": "file:/home/lc/ws/flake-fhs"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1770197578,
-        "narHash": "sha256-AYqlWrX09+HvGs8zM6ebZ1pwUqjkfpnv8mewYwAo+iM=",
+        "lastModified": 1783693695,
+        "narHash": "sha256-ll8SjCNgwWuou5Q64GMjuUrrqRJW1gy3uCMjd+oa9KA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "00c21e4c93d963c50d4c0c89bfa84ed6e0694df2",
+        "rev": "dc29ee8fa098c86053cc8ef25594738f28be5b6b",
         "type": "github"
       },
       "original": {

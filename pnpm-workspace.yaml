@@ -1,0 +1,5 @@
+# pnpm 11 项目级配置：替代 package.json#pnpm 字段（pnpm 11 起不再读取该字段）。
+# esbuild 为 astro/vite 的 transitive 依赖，sharp 为直接依赖；二者均含 native build script 需显式允许。
+allowBuilds:
+  esbuild: true
+  sharp: true

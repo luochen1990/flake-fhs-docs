@@ -4,7 +4,7 @@ pkgs.mkShell {
   packages = with pkgs; [
     git
     nodejs
-    nodePackages.pnpm
+    pnpm
     lychee
   ];
 
